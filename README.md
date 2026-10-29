@@ -62,6 +62,7 @@ docker compose --env-file .env.docker -f compose.yaml -f compose.postgres.yaml u
 内置模式可以叠加 `compose.bind.yaml` 将数据放到宿主机指定目录；容器重建不删除持久化数据。切换数据库不会自动搬迁记录，使用带预检和核对的存储迁移工具。
 
 - [Docker 部署详解](docs/docker.md)
+- [Docker 部署参数怎么填](docs/docker-parameters.md)
 - [直接拉取 GitHub 容器镜像](docs/container-registry.md)
 - [配置参考](docs/configuration.md)
 - [存储迁移](docs/storage-migration.md)

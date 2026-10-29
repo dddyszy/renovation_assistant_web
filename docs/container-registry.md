@@ -49,6 +49,8 @@ docker pull ghcr.io/dddyszy/renovation_assistant_web:0.9.5
 
 ## 用 Compose 直接拉取运行
 
+部署前填写哪些参数、哪些可以留空，见 [Docker 参数填写指南](docker-parameters.md)。
+
 服务器只需复制选用的 Compose 配置、`.env.docker.example`，使用 Caddy 时再复制 `deploy/Caddyfile`。无需上传源代码和 node_modules。
 
 ```bash

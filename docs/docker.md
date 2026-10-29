@@ -20,6 +20,8 @@
 
 ## 准备配置
 
+各参数的必填条件、填写格式、默认值和四种完整示例见 [Docker 参数填写指南](docker-parameters.md)。内置模式通常只需修改 APP_ORIGIN；使用随附 Caddy 时再填写 DOMAIN；使用 PostgreSQL 时再填写对应数据库信息。
+
 ```bash
 cp .env.docker.example .env.docker
 ```
