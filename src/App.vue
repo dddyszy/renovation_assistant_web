@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, watch } from "vue";
+import { computed, onMounted, onUnmounted, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { useQueryClient } from "@tanstack/vue-query";
 import {
@@ -87,8 +87,15 @@ watch(
       });
   },
 );
+let mounted = true;
+function sessionExpired() {
+  w.clear();
+  client.clear();
+  router.replace("/login");
+}
 onMounted(async () => {
   await w.bootstrap();
+  if (!mounted) return;
   if (!w.user && !publicPage.value && !w.failure)
     await router.replace({
       path: "/login",
@@ -96,12 +103,14 @@ onMounted(async () => {
     });
   else if (w.user && publicPage.value && route.path !== "/reset-password")
     await router.replace("/");
-  window.addEventListener("session-expired", () => {
-    w.clear();
-    client.clear();
-    router.replace("/login");
-  });
+  if (!mounted) return;
+  window.addEventListener("session-expired", sessionExpired);
   window.addEventListener("workspace-unavailable", recover);
+});
+onUnmounted(() => {
+  mounted = false;
+  window.removeEventListener("session-expired", sessionExpired);
+  window.removeEventListener("workspace-unavailable", recover);
 });
 const needsProject = computed(
   () => !["/family", "/me"].includes(route.path) && !route.path.startsWith("/invite/"),

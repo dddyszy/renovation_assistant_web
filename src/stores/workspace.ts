@@ -1,5 +1,5 @@
 import type { User, Family, Project } from "../../shared/api";
-import { computed, ref, watch } from "vue";
+import { computed, onScopeDispose, ref, watch } from "vue";
 import { defineStore } from "pinia";
 import { request, HttpError, errorMessage } from "../services/api";
 // The shared modal accepts partial drafts for several resource shapes.
@@ -52,6 +52,8 @@ export const useWorkspace = defineStore("workspace", () => {
     editing.value = null;
   }
   function clear() {
+    clearTimeout(timer);
+    clearTimeout(preferenceTimer);
     user.value = null;
     families.value = [];
     projects.value = [];
@@ -122,6 +124,10 @@ export const useWorkspace = defineStore("workspace", () => {
             }).catch(() => {});
         }, 600);
     }
+  });
+  onScopeDispose(() => {
+    clearTimeout(timer);
+    clearTimeout(preferenceTimer);
   });
   return {
     user,
