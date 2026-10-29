@@ -28,8 +28,7 @@ jobs:
           node-version: 24
           cache: npm
       - run: npm ci
-      - run: npm run build
-      - run: npm test
+      - run: npm run check
       - name: Prepare disposable migration target
         run: node --input-type=module -e "import pg from 'pg'; const pool=new pg.Pool({connectionString:process.env.TEST_DATABASE_URL}); try { await pool.query('CREATE DATABASE zhu_jia_migration') } finally { await pool.end() }"
         env:

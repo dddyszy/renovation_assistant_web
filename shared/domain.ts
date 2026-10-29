@@ -21,14 +21,7 @@ export const templates = [
     type: "half",
     name: "局部翻新",
     description: "厨房、卫生间等局部改造",
-    stages: [
-      "方案设计",
-      "拆除改造",
-      "水电防水",
-      "泥瓦铺贴",
-      "安装收尾",
-      "验收交付",
-    ],
+    stages: ["方案设计", "拆除改造", "水电防水", "泥瓦铺贴", "安装收尾", "验收交付"],
   },
   {
     id: "full-standard",

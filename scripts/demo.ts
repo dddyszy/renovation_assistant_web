@@ -1,8 +1,16 @@
+import type {
+  ApiResponse,
+  Family,
+  Project,
+  Stage,
+  Material,
+  NoteColumn,
+} from "../shared/api.ts";
 // Explicit, development-only sample data. Never runs on application startup.
 export {};
 const root = process.env.DEMO_URL || "http://localhost:5173";
 let cookie = "";
-async function api(path: string, method = "GET", body?: unknown) {
+async function api<T = unknown>(path: string, method = "GET", body?: unknown) {
   const response = await fetch(`${root}/api/v1${path}`, {
     method,
     headers: {
@@ -13,13 +21,15 @@ async function api(path: string, method = "GET", body?: unknown) {
     },
     ...(body ? { body: JSON.stringify(body) } : {}),
   });
-  const json = (await response.json()) as any;
+  const json = (await response.json()) as ApiResponse<T> & {
+    error?: { message?: string };
+  };
   if (!response.ok) throw new Error(json.error?.message || "请求失败");
   const set = response.headers.get("set-cookie");
   if (set) cookie = set.split(";")[0]!;
   return json.data;
 }
-const health = await api("/health");
+const health = await api<{ localMail: boolean }>("/health");
 if (process.env.NODE_ENV === "production" || !health.localMail)
   throw new Error("演示数据只允许写入未配置邮件的本地开发环境");
 const email = "demo@example.test",
@@ -34,13 +44,13 @@ try {
   });
   await api("/auth/login", "POST", { email, password });
 }
-const families = await api("/families");
+const families = await api<Family[]>("/families");
 if (families.length) {
   console.log("演示账号已有家庭，保留现有数据。");
   process.exit(0);
 }
-const family = await api("/families", "POST", { name: "林家的小日子" });
-const project = await api(`/families/${family.id}/projects`, "POST", {
+const family = await api<Family>("/families", "POST", { name: "林家的小日子" });
+const project = await api<Project>(`/families/${family.id}/projects`, "POST", {
   name: "云栖 · 我们的新家",
   packageType: "half",
   budgetCents: 30000000,
@@ -51,16 +61,14 @@ const project = await api(`/families/${family.id}/projects`, "POST", {
   description: "这是用于体验功能的虚构演示数据，可自由修改。",
 });
 const base = `/families/${family.id}/projects/${project.id}`;
-const stages = await api(base + "/stages");
+const stages = await api<Stage[]>(base + "/stages");
 for (const [i, s] of stages.entries())
   await api(base + `/stages/${s.id}`, "PATCH", {
     version: s.version,
     budgetCents: [
-      1500000, 2000000, 5000000, 6000000, 3500000, 2500000, 4000000, 3500000,
-      500000,
+      1500000, 2000000, 5000000, 6000000, 3500000, 2500000, 4000000, 3500000, 500000,
     ][i],
-    status:
-      i < 2 ? "completed" : i === 2 || i === 3 ? "in_progress" : "pending",
+    status: i < 2 ? "completed" : i === 2 || i === 3 ? "in_progress" : "pending",
   });
 const materials = [
   {
@@ -110,7 +118,7 @@ const materials = [
 ];
 const saved = [];
 for (const m of materials)
-  saved.push(await api(base + "/materials", "POST", m));
+  saved.push(await api<Material>(base + "/materials", "POST", m));
 const costs = [
   {
     title: "装修设计费",
@@ -181,7 +189,7 @@ const costs = [
 ];
 for (const c of costs)
   await api(base + "/costs", "POST", { ...c, requestId: crypto.randomUUID() });
-const cols = await api(base + "/note-columns");
+const cols = await api<NoteColumn[]>(base + "/note-columns");
 await api(base + "/notes/import", "POST", {
   items: [
     {
@@ -193,10 +201,7 @@ await api(base + "/notes/import", "POST", {
     {
       title: "厨房插座位置再确认",
       columnId: cols[0].id,
-      details: [
-        "洗碗机、咖啡机各留一个独立插座",
-        "台面插座高度与橱柜方案一起核对",
-      ],
+      details: ["洗碗机、咖啡机各留一个独立插座", "台面插座高度与橱柜方案一起核对"],
       starred: true,
     },
     {
@@ -217,6 +222,4 @@ await api(base + "/notes/import", "POST", {
     },
   ],
 });
-console.log(
-  "本地演示数据已创建。账号 demo@example.test，密码 ZhuJiaDemo!2026。",
-);
+console.log("本地演示数据已创建。账号 demo@example.test，密码 ZhuJiaDemo!2026。");

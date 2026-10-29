@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import type { Note } from "../../shared/api";
 import { computed, ref, watch } from "vue";
 import { useQuery, useQueryClient } from "@tanstack/vue-query";
 import {
@@ -11,9 +12,9 @@ import {
   ArrowUp,
   ArrowDown,
 } from "@lucide/vue";
-import { useWorkspace } from "../workspace";
-import { useProjectQuery } from "../queries";
-import { request } from "../api";
+import { useWorkspace } from "../stores/workspace";
+import { useProjectQuery } from "../composables/useProjectQuery";
+import { request, errorMessage } from "../services/api";
 import QueryState from "../components/QueryState.vue";
 import EmptyState from "../components/EmptyState.vue";
 const w = useWorkspace(),
@@ -30,8 +31,7 @@ const w = useWorkspace(),
 watch(
   () => columns.data.value?.data,
   (list) => {
-    if (!list?.some((c: any) => c.id === columnId.value))
-      columnId.value = list?.[0]?.id || "";
+    if (!list?.some((c) => c.id === columnId.value)) columnId.value = list?.[0]?.id || "";
   },
   { immediate: true },
 );
@@ -45,18 +45,12 @@ const params = computed(() =>
   }).toString(),
 );
 const query = useQuery({
-  queryKey: computed(() => [
-    "project",
-    w.fid,
-    w.pid,
-    "notes-list",
-    params.value,
-  ]),
+  queryKey: computed(() => ["project", w.fid, w.pid, "notes-list", params.value]),
   enabled: computed(() => !!columnId.value && !!w.project),
-  queryFn: () => request(`${w.base}/notes?${params.value}`),
+  queryFn: () => request<Note[]>(`${w.base}/notes?${params.value}`),
   refetchInterval: 30000,
 });
-async function toggle(n: any, field: string) {
+async function toggle(n: Note, field: string) {
   busy.value = true;
   try {
     await request(`${w.base}/notes/${n.id}`, "PATCH", {
@@ -69,20 +63,20 @@ async function toggle(n: any, field: string) {
             : "confirmed",
     });
     await client.invalidateQueries({ queryKey: ["project", w.fid, w.pid] });
-  } catch (e: any) {
-    error.value = e.message;
+  } catch (e) {
+    error.value = errorMessage(e);
   } finally {
     busy.value = false;
   }
 }
-async function restore(n: any) {
+async function restore(n: Note) {
   try {
     await request(`${w.base}/notes/${n.id}/restore`, "POST", {
       version: n.version,
     });
     await client.invalidateQueries({ queryKey: ["project", w.fid, w.pid] });
-  } catch (e: any) {
-    error.value = e.message;
+  } catch (e) {
+    error.value = errorMessage(e);
   }
 }
 async function moveColumn(i: number, direction: number) {
@@ -94,8 +88,8 @@ async function moveColumn(i: number, direction: number) {
       items: list.map((c) => ({ id: c.id, version: c.version })),
     });
     await client.invalidateQueries({ queryKey: ["project", w.fid, w.pid] });
-  } catch (e: any) {
-    error.value = e.message;
+  } catch (e) {
+    error.value = errorMessage(e);
   } finally {
     busy.value = false;
   }
@@ -159,8 +153,7 @@ function add() {
           {{ c.name }}<span v-if="columnId === c.id" class="nav-dot" />
         </button>
         <div v-if="managing && w.canWrite" class="column-tools">
-          <button class="text-btn" @click="w.open('column', c)">
-            改名 / 删除</button
+          <button class="text-btn" @click="w.open('column', c)">改名 / 删除</button
           ><button
             class="icon-btn"
             aria-label="上移专栏"
@@ -171,20 +164,14 @@ function add() {
           ><button
             class="icon-btn"
             aria-label="下移专栏"
-            :disabled="
-              Number(i) === columns.data.value!.data.length - 1 || busy
-            "
+            :disabled="Number(i) === columns.data.value!.data.length - 1 || busy"
             @click="moveColumn(Number(i), 1)"
           >
             <ArrowDown :size="14" />
           </button>
         </div>
       </div>
-      <button
-        v-if="w.canWrite"
-        class="text-btn add-column"
-        @click="w.open('column')"
-      >
+      <button v-if="w.canWrite" class="text-btn add-column" @click="w.open('column')">
         <Plus :size="16" />新建专栏
       </button>
     </aside>
@@ -214,10 +201,7 @@ function add() {
             page = 1;
           "
         >
-          <Star
-            :size="16"
-            :fill="starred ? 'currentColor' : 'none'"
-          />只看重点</button
+          <Star :size="16" :fill="starred ? 'currentColor' : 'none'" />只看重点</button
         ><button
           class="icon-btn"
           :aria-label="deleted ? '返回备忘' : '最近删除'"
@@ -251,11 +235,7 @@ function add() {
               :class="{ gold: n.starred }"
               :fill="n.starred ? 'currentColor' : 'none'"
             /></button
-          ><button
-            class="note-title"
-            :disabled="deleted"
-            @click="w.open('note', n)"
-          >
+          ><button class="note-title" :disabled="deleted" @click="w.open('note', n)">
             {{ n.title }}</button
           ><button
             v-if="!deleted"
@@ -286,17 +266,13 @@ function add() {
         :title="deleted ? '这里没有已删除的备忘' : '想法先记下，答案慢慢找'"
         description="从物业要求到插座位置，家的细节都值得商量。"
       />
-      <div v-if="query.data.value?.meta.total > 30" class="pagination">
-        <button
-          class="btn secondary small-btn"
-          :disabled="page === 1"
-          @click="page--"
-        >
+      <div v-if="(query.data.value?.meta?.total ?? 0) > 30" class="pagination">
+        <button class="btn secondary small-btn" :disabled="page === 1" @click="page--">
           上一页</button
         ><span>第 {{ page }} 页</span
         ><button
           class="btn secondary small-btn"
-          :disabled="page * 30 >= query.data.value!.meta.total"
+          :disabled="page * 30 >= (query.data.value?.meta?.total ?? 0)"
           @click="page++"
         >
           下一页

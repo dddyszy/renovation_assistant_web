@@ -1,10 +1,11 @@
 <script setup lang="ts">
+import type { Material } from "../../shared/api";
 import { computed, ref } from "vue";
 import { useQuery, useQueryClient } from "@tanstack/vue-query";
 import { Plus, Search, Package, ArrowUpRight, RotateCcw } from "@lucide/vue";
-import { useWorkspace } from "../workspace";
-import { request } from "../api";
-import { useProjectQuery } from "../queries";
+import { useWorkspace } from "../stores/workspace";
+import { request, errorMessage } from "../services/api";
+import { useProjectQuery } from "../composables/useProjectQuery";
 import { money, purchaseLabels } from "../../shared/domain";
 import QueryState from "../components/QueryState.vue";
 import EmptyState from "../components/EmptyState.vue";
@@ -30,32 +31,28 @@ const params = computed(() =>
 );
 const query = useQuery({
   enabled: computed(() => !!w.project),
-  queryKey: computed(() => [
-    "project",
-    w.fid,
-    w.pid,
-    "materials-list",
-    params.value,
-  ]),
-  queryFn: () => request(`${w.base}/materials?${params.value}`),
+  queryKey: computed(() => ["project", w.fid, w.pid, "materials-list", params.value]),
+  queryFn: () => request<Material[]>(`${w.base}/materials?${params.value}`),
   refetchInterval: 30000,
 });
 function actual(id: string) {
   return (
-    stats.data.value?.data?.byMaterial?.find(
-      (m: any) => m.materialId === id,
-    ) || { totalCents: 0, paidCents: 0, pendingCents: 0 }
+    stats.data.value?.data?.byMaterial?.find((m) => m.materialId === id) || {
+      totalCents: 0,
+      paidCents: 0,
+      pendingCents: 0,
+    }
   );
 }
-async function restore(m: any) {
+async function restore(m: Material) {
   try {
     await request(`${w.base}/materials/${m.id}/restore`, "POST", {
       version: m.version,
     });
     await client.invalidateQueries({ queryKey: ["project", w.fid, w.pid] });
     w.notify("材料已恢复");
-  } catch (e: any) {
-    error.value = e.message;
+  } catch (e) {
+    error.value = errorMessage(e);
   }
 }
 </script>
@@ -77,10 +74,7 @@ async function restore(m: any) {
     </div>
     <div>
       <span>材料项目数</span
-      ><strong
-        >{{ stats.data.value?.data?.materialCount || 0
-        }}<small> 件</small></strong
-      >
+      ><strong>{{ stats.data.value?.data?.materialCount || 0 }}<small> 件</small></strong>
     </div>
     <p>计划金额不直接计入总成本，<br />实际付款请通过「记一笔」关联材料。</p>
   </div>
@@ -101,20 +95,12 @@ async function restore(m: any) {
     <div class="filter-row">
       <select v-model="stage" aria-label="筛选阶段" @change="page = 1">
         <option value="">全部阶段</option>
-        <option
-          v-for="s in stages.data.value?.data || []"
-          :key="s.id"
-          :value="s.id"
-        >
+        <option v-for="s in stages.data.value?.data || []" :key="s.id" :value="s.id">
           {{ s.name }}
         </option></select
       ><select v-model="status" aria-label="采购状态" @change="page = 1">
         <option value="">全部采购状态</option>
-        <option
-          v-for="(label, value) in purchaseLabels"
-          :key="value"
-          :value="value"
-        >
+        <option v-for="(label, value) in purchaseLabels" :key="value" :value="value">
           {{ label }}
         </option></select
       ><button
@@ -141,27 +127,18 @@ async function restore(m: any) {
       class="panel material-card"
     >
       <header>
-        <span class="record-icon"
-          ><Package :size="22" :stroke-width="1.5" /></span
+        <span class="record-icon"><Package :size="22" :stroke-width="1.5" /></span
         ><span
-          :class="[
-            'pill',
-            m.purchaseStatus === 'purchased' ? 'green' : 'neutral',
-          ]"
+          :class="['pill', m.purchaseStatus === 'purchased' ? 'green' : 'neutral']"
           >{{ purchaseLabels[m.purchaseStatus] }}</span
         >
       </header>
-      <button
-        class="material-name"
-        :disabled="deleted"
-        @click="w.open('material', m)"
-      >
+      <button class="material-name" :disabled="deleted" @click="w.open('material', m)">
         {{ m.name }}<ArrowUpRight v-if="w.canWrite && !deleted" :size="17" />
       </button>
       <p class="muted small-text">
         {{
-          stages.data.value?.data?.find((s: any) => s.id === m.stageId)?.name ||
-          "未指定阶段"
+          stages.data.value?.data?.find((s) => s.id === m.stageId)?.name || "未指定阶段"
         }}
         · {{ m.quantity }} {{ m.unit }}
       </p>
@@ -182,12 +159,9 @@ async function restore(m: any) {
         <span>{{
           m.totalPriceCents < actual(m.id).totalCents ? "超出计划" : "计划余额"
         }}</span
-        ><strong
-          :class="{ danger: m.totalPriceCents < actual(m.id).totalCents }"
-          >{{
-            money(Math.abs(m.totalPriceCents - actual(m.id).totalCents))
-          }}</strong
-        >
+        ><strong :class="{ danger: m.totalPriceCents < actual(m.id).totalCents }">{{
+          money(Math.abs(m.totalPriceCents - actual(m.id).totalCents))
+        }}</strong>
       </div>
       <button
         v-if="deleted && w.canWrite"
@@ -224,17 +198,13 @@ async function restore(m: any) {
     :action="w.canWrite && !deleted ? '添加材料' : undefined"
     @action="w.open('material')"
   />
-  <div v-if="query.data.value?.meta.total > 30" class="pagination">
-    <button
-      class="btn secondary small-btn"
-      :disabled="page === 1"
-      @click="page--"
-    >
+  <div v-if="(query.data.value?.meta?.total ?? 0) > 30" class="pagination">
+    <button class="btn secondary small-btn" :disabled="page === 1" @click="page--">
       上一页</button
     ><span>第 {{ page }} 页</span
     ><button
       class="btn secondary small-btn"
-      :disabled="page * 30 >= query.data.value!.meta.total"
+      :disabled="page * 30 >= (query.data.value?.meta?.total ?? 0)"
       @click="page++"
     >
       下一页

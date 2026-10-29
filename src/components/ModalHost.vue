@@ -1,28 +1,19 @@
 <script setup lang="ts">
+import type {
+  ApiResponse,
+  Statistics,
+  Material,
+  Family,
+  Project,
+  VersionedRecord,
+} from "../../shared/api";
 import { computed, ref, watch, nextTick, onMounted, onUnmounted } from "vue";
 import { useQueryClient } from "@tanstack/vue-query";
-import {
-  X,
-  Plus,
-  Trash2,
-  Archive,
-  RotateCcw,
-  Copy,
-  ArrowLeft,
-  Wallet,
-  Package,
-  NotebookPen,
-} from "@lucide/vue";
-import { useWorkspace, type Item } from "../workspace";
-import { request } from "../api";
-import {
-  templates,
-  categories,
-  toCents,
-  parseNotes,
-  money,
-} from "../../shared/domain";
-import { useProjectQuery } from "../queries";
+import { X, Plus, Trash2, Archive, RotateCcw, Copy, Wallet, Package } from "@lucide/vue";
+import { useWorkspace, type Item } from "../stores/workspace";
+import { request, errorMessage } from "../services/api";
+import { templates, categories, toCents, parseNotes, money } from "../../shared/domain";
+import { useProjectQuery } from "../composables/useProjectQuery";
 const w = useWorkspace(),
   client = useQueryClient(),
   form = ref<Item>({}),
@@ -34,7 +25,7 @@ const w = useWorkspace(),
   deleteConfirm = ref(false);
 const stages = useProjectQuery("stages"),
   columns = useProjectQuery("note-columns");
-const materials = ref<Item[]>([]),
+const materials = ref<Material[]>([]),
   requestId = ref(""),
   priorFocus = ref<HTMLElement>();
 const title = computed(
@@ -79,25 +70,19 @@ const writable = computed(
       w.family?.role === "owner"),
 );
 const availableMaterials = computed(() =>
-  materials.value.filter(
-    (m) => !form.value.stageId || m.stageId === form.value.stageId,
-  ),
+  materials.value.filter((m) => !form.value.stageId || m.stageId === form.value.stageId),
 );
 const templateOptions = computed(() =>
-  templates.filter(
-    (t) => t.type === "any" || t.type === form.value.packageType,
-  ),
+  templates.filter((t) => t.type === "any" || t.type === form.value.packageType),
 );
 function resetCost() {
   form.value = {
     title: "",
     amount: "",
-    category:
-      categories[w.project?.packageType === "full" ? "full" : "half"][0],
+    category: categories[w.project?.packageType === "full" ? "full" : "half"][0],
     stageId:
       localStorage.getItem(`stage:${w.user?.id}:${w.pid}`) ||
-      stages.data.value?.data?.find((s: any) => s.status === "in_progress")
-        ?.id ||
+      stages.data.value?.data?.find((s) => s.status === "in_progress")?.id ||
       "",
     materialId: "",
     paymentStatus: "pending",
@@ -133,29 +118,29 @@ watch(
         };
       else
         try {
-          const draft = JSON.parse(
-            localStorage.getItem(draftKey.value) || "null",
-          );
+          const draft = JSON.parse(localStorage.getItem(draftKey.value) || "null");
           if (draft) {
             form.value = draft.form;
             requestId.value = draft.requestId || requestId.value;
             localMessage.value = "已恢复上次未完成的草稿";
           }
-        } catch {}
+        } catch {
+          /* Ignore an invalid saved draft. */
+        }
       try {
         let page = 1;
-        const all: Item[] = [];
+        const all: Material[] = [];
         while (true) {
-          const result = await request(
+          const result = await request<Material[]>(
             `${w.base}/materials?pageSize=100&page=${page}`,
           );
           all.push(...result.data);
-          if (all.length >= result.meta.total) break;
+          if (all.length >= result.meta!.total) break;
           page++;
         }
         materials.value = all;
-      } catch (e: any) {
-        error.value = e.message;
+      } catch (e) {
+        error.value = errorMessage(e);
       }
     } else if (type === "project")
       form.value = e
@@ -210,13 +195,10 @@ watch(
         content: "",
         columnId: e?.columnId || columns.data.value?.data?.[0]?.id || "",
       };
-    else if (type === "familyRename")
-      form.value = { name: w.family?.name || "" };
+    else if (type === "familyRename") form.value = { name: w.family?.name || "" };
     else form.value = { name: "" };
     await nextTick();
-    panel.value
-      ?.querySelector<HTMLElement>("input,select,textarea,button")
-      ?.focus();
+    panel.value?.querySelector<HTMLElement>("input,select,textarea,button")?.focus();
   },
 );
 watch(
@@ -294,7 +276,7 @@ async function save() {
       await w.loadFamilies();
       client.clear();
     } else if (type === "family") {
-      const { data } = await request("/families", "POST", { name: f.name });
+      const { data } = await request<Family>("/families", "POST", { name: f.name });
       w.fid = data.id;
       await w.loadFamilies();
     } else if (type === "familyRename") {
@@ -313,7 +295,7 @@ async function save() {
         endDate: f.endDate || "",
         ...(e ? { version: e.version } : {}),
       };
-      const { data } = await request(
+      const { data } = await request<Project>(
         e ? w.base : `/families/${w.fid}/projects`,
         e ? "PATCH" : "POST",
         payload,
@@ -378,8 +360,7 @@ async function save() {
       );
       if (type === "cost") {
         localStorage.removeItem(draftKey.value);
-        if (f.stageId)
-          localStorage.setItem(`stage:${w.user?.id}:${w.pid}`, f.stageId);
+        if (f.stageId) localStorage.setItem(`stage:${w.user?.id}:${w.pid}`, f.stageId);
       }
     }
     await refresh();
@@ -390,8 +371,8 @@ async function save() {
       await nextTick();
       panel.value?.querySelector<HTMLInputElement>("input")?.focus();
     } else w.close();
-  } catch (e: any) {
-    error.value = e.message;
+  } catch (e) {
+    error.value = errorMessage(e);
   } finally {
     busy.value = false;
   }
@@ -412,7 +393,7 @@ async function remove() {
       column: "note-columns",
     };
     const path = `${w.base}/${map[w.modal]}/${w.editing!.id}`;
-    const { data } = await request(path, "DELETE", {
+    const { data } = await request<VersionedRecord>(path, "DELETE", {
       version: w.editing!.version,
     });
     await refresh();
@@ -421,13 +402,13 @@ async function remove() {
         await request(path + "/restore", "POST", { version: data.version });
         await refresh();
         w.notify("记录已恢复");
-      } catch (e: any) {
-        w.notify(e.message);
+      } catch (e) {
+        w.notify(errorMessage(e));
       }
     });
     w.close();
-  } catch (e: any) {
-    error.value = e.message;
+  } catch (e) {
+    error.value = errorMessage(e);
   } finally {
     busy.value = false;
   }
@@ -443,8 +424,8 @@ async function archive(p: Item) {
     await w.loadProjects();
     await refresh();
     w.notify(p.status === "archived" ? "项目已恢复" : "项目已归档");
-  } catch (e: any) {
-    error.value = e.message;
+  } catch (e) {
+    error.value = errorMessage(e);
   } finally {
     busy.value = false;
   }
@@ -463,7 +444,7 @@ function selectMaterial() {
   }
 }
 function copyPrevious() {
-  const previous = client.getQueryData<any>([
+  const previous = client.getQueryData<ApiResponse<Statistics>>([
     "project",
     w.fid,
     w.pid,
@@ -495,28 +476,17 @@ function copyPrevious() {
       >
         <header class="modal-header">
           <div>
-            <span class="eyebrow"
-              >筑家手记 · {{ w.family?.name || "OUR HOME" }}</span
-            >
+            <span class="eyebrow">筑家手记 · {{ w.family?.name || "OUR HOME" }}</span>
             <h2 id="modal-title">{{ title }}</h2>
           </div>
-          <button
-            class="icon-btn"
-            aria-label="关闭"
-            @click="close"
-            :disabled="busy"
-          >
+          <button class="icon-btn" aria-label="关闭" :disabled="busy" @click="close">
             <X :size="22" />
           </button>
         </header>
         <div v-if="error" class="error-box" role="alert">{{ error }}</div>
         <template v-if="w.modal === 'projects'"
           ><div class="project-management">
-            <div
-              v-for="p in w.projects"
-              :key="p.id"
-              class="project-management-row"
-            >
+            <div v-for="p in w.projects" :key="p.id" class="project-management-row">
               <div>
                 <strong>{{ p.name }}</strong
                 ><small
@@ -548,16 +518,14 @@ function copyPrevious() {
                   编辑</button
                 ><button
                   class="icon-btn"
-                  :aria-label="
-                    p.status === 'archived' ? '恢复项目' : '归档项目'
-                  "
+                  :aria-label="p.status === 'archived' ? '恢复项目' : '归档项目'"
                   :disabled="busy"
                   @click="archive(p)"
                 >
-                  <RotateCcw
-                    v-if="p.status === 'archived'"
+                  <RotateCcw v-if="p.status === 'archived'" :size="17" /><Archive
+                    v-else
                     :size="17"
-                  /><Archive v-else :size="17" />
+                  />
                 </button>
               </div>
             </div>
@@ -569,8 +537,7 @@ function copyPrevious() {
         <form v-else @submit.prevent="save">
           <fieldset :disabled="!writable" class="form-fieldset">
             <div v-if="localMessage" class="info-box">{{ localMessage }}</div>
-            <template
-              v-if="['destroyProject', 'dissolveFamily'].includes(w.modal)"
+            <template v-if="['destroyProject', 'dissolveFamily'].includes(w.modal)"
               ><div class="error-box">
                 {{
                   w.modal === "destroyProject"
@@ -584,9 +551,7 @@ function copyPrevious() {
                 }}名称确认<input
                   v-model="form.confirmName"
                   :placeholder="
-                    w.modal === 'destroyProject'
-                      ? w.editing?.name
-                      : w.family?.name
+                    w.modal === 'destroyProject' ? w.editing?.name : w.family?.name
                   "
                   required /></label
               ><label class="field"
@@ -619,15 +584,10 @@ function copyPrevious() {
                     v-for="type in ['half', 'full']"
                     :key="type"
                     type="button"
-                    :class="[
-                      'choice-card',
-                      { selected: form.packageType === type },
-                    ]"
+                    :class="['choice-card', { selected: form.packageType === type }]"
                     @click="form.packageType = type"
                   >
-                    <strong>{{
-                      type === "half" ? "半包装修" : "全包装修"
-                    }}</strong
+                    <strong>{{ type === "half" ? "半包装修" : "全包装修" }}</strong
                     ><small>{{
                       type === "half"
                         ? "自己采购主材，细记每一阶段"
@@ -643,10 +603,7 @@ function copyPrevious() {
                     v-for="t in templateOptions"
                     :key="t.id"
                     type="button"
-                    :class="[
-                      'template-option',
-                      { selected: form.templateId === t.id },
-                    ]"
+                    :class="['template-option', { selected: form.templateId === t.id }]"
                     @click="form.templateId = t.id"
                   >
                     <strong>{{ t.name }}</strong
@@ -654,9 +611,8 @@ function copyPrevious() {
                   </button>
                 </div>
                 <small class="field-help">{{
-                  templates
-                    .find((t) => t.id === form.templateId)
-                    ?.stages.join(" → ") || "创建后自由添加装修阶段"
+                  templates.find((t) => t.id === form.templateId)?.stages.join(" → ") ||
+                  "创建后自由添加装修阶段"
                 }}</small>
               </div>
               <div class="form-grid">
@@ -665,9 +621,7 @@ function copyPrevious() {
                     v-model="form.budget"
                     inputmode="decimal"
                     placeholder="200000.00" /></label
-                ><label
-                  v-if="form.packageType === 'full' && !w.editing?.id"
-                  class="field"
+                ><label v-if="form.packageType === 'full' && !w.editing?.id" class="field"
                   >装修合同金额（元）<input
                     v-model="form.contract"
                     inputmode="decimal"
@@ -730,10 +684,7 @@ function copyPrevious() {
               /></label>
               <div class="form-grid">
                 <label class="field"
-                  >所属阶段<select
-                    v-model="form.stageId"
-                    @change="form.materialId = ''"
-                  >
+                  >所属阶段<select v-model="form.stageId" @change="form.materialId = ''">
                     <option value="">不指定阶段</option>
                     <option
                       v-for="s in stages.data.value?.data || []"
@@ -780,16 +731,9 @@ function copyPrevious() {
               <details class="form-details" :open="!!w.editing?.id">
                 <summary>商家、材料关联与更多信息</summary>
                 <label class="field"
-                  >关联材料<select
-                    v-model="form.materialId"
-                    @change="selectMaterial"
-                  >
+                  >关联材料<select v-model="form.materialId" @change="selectMaterial">
                     <option value="">不关联材料</option>
-                    <option
-                      v-for="m in availableMaterials"
-                      :key="m.id"
-                      :value="m.id"
-                    >
+                    <option v-for="m in availableMaterials" :key="m.id" :value="m.id">
                       {{ m.name }}
                     </option>
                   </select></label
@@ -812,21 +756,14 @@ function copyPrevious() {
                   >
                 </div>
                 <label class="field"
-                  >备注<textarea
-                    v-model="form.note"
-                    rows="2"
-                    maxlength="1000"
-                  />
+                  >备注<textarea v-model="form.note" rows="2" maxlength="1000" />
                 </label>
               </details>
               <div v-if="!w.editing?.id" class="form-extras">
                 <button type="button" class="text-btn" @click="copyPrevious">
                   <Copy :size="15" />复制上一笔</button
                 ><label class="checkbox-line"
-                  ><input
-                    v-model="keepAdding"
-                    type="checkbox"
-                  />保存后继续记</label
+                  ><input v-model="keepAdding" type="checkbox" />保存后继续记</label
                 >
               </div>
               <small class="muted"
@@ -927,10 +864,7 @@ function copyPrevious() {
                   placeholder="咖啡机、洗碗机各留一个插座&#10;台面高度和家人确认"
                 /></label
               ><label class="checkbox-line"
-                ><input
-                  v-model="form.starred"
-                  type="checkbox"
-                />标记为重点</label
+                ><input v-model="form.starred" type="checkbox" />标记为重点</label
               ><label class="field"
                 >确认状态<select v-model="form.status">
                   <option value="pending">待确认</option>
@@ -948,10 +882,7 @@ function copyPrevious() {
             ></template>
             <template v-if="w.modal === 'stage'"
               ><label class="field"
-                >阶段名称<input
-                  v-model="form.name"
-                  required
-                  maxlength="60" /></label
+                >阶段名称<input v-model="form.name" required maxlength="60" /></label
               ><label class="field"
                 >阶段预算（元）<input
                   v-model="form.budget"
@@ -988,9 +919,7 @@ function copyPrevious() {
                 <strong>将导入 {{ importPreview.length }} 项</strong>
                 <p v-for="(n, i) in importPreview" :key="i">
                   {{ n.starred ? "★ " : "" }}{{ n.title
-                  }}<small v-if="n.details.length">{{
-                    n.details.join(" · ")
-                  }}</small>
+                  }}<small v-if="n.details.length">{{ n.details.join(" · ") }}</small>
                 </p>
               </div></template
             >
@@ -1011,17 +940,10 @@ function copyPrevious() {
                 deleteConfirm ? "再次点击确认删除" : "删除"
               }}</button
             ><span v-else class="save-hint">{{
-              w.modal === "cost" && !w.editing?.id
-                ? "未提交内容会自动保存为本机草稿"
-                : ""
+              w.modal === "cost" && !w.editing?.id ? "未提交内容会自动保存为本机草稿" : ""
             }}</span>
             <div class="inline-actions">
-              <button
-                type="button"
-                class="btn secondary"
-                @click="close"
-                :disabled="busy"
-              >
+              <button type="button" class="btn secondary" :disabled="busy" @click="close">
                 取消</button
               ><button v-if="writable" class="btn primary" :disabled="busy">
                 {{

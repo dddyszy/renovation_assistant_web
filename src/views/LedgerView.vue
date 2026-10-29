@@ -1,17 +1,12 @@
 <script setup lang="ts">
+import type { Cost } from "../../shared/api";
 import { computed, ref, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { useQuery, useQueryClient } from "@tanstack/vue-query";
-import {
-  Plus,
-  Search,
-  RotateCcw,
-  ChevronLeft,
-  ChevronRight,
-} from "@lucide/vue";
-import { request } from "../api";
-import { useWorkspace } from "../workspace";
-import { useProjectQuery } from "../queries";
+import { Plus, Search, RotateCcw, ChevronLeft, ChevronRight } from "@lucide/vue";
+import { request, errorMessage } from "../services/api";
+import { useWorkspace } from "../stores/workspace";
+import { useProjectQuery } from "../composables/useProjectQuery";
 import { money, categories } from "../../shared/domain";
 import QueryState from "../components/QueryState.vue";
 import EmptyState from "../components/EmptyState.vue";
@@ -40,7 +35,7 @@ const params = computed(() => {
 const query = useQuery({
   enabled: computed(() => !!w.project),
   queryKey: computed(() => ["project", w.fid, w.pid, "ledger", params.value]),
-  queryFn: () => request(`${w.base}/costs?${params.value}`),
+  queryFn: () => request<Cost[]>(`${w.base}/costs?${params.value}`),
   refetchInterval: 30000,
 });
 const rows = computed(() => query.data.value?.data || []),
@@ -64,15 +59,15 @@ function apply() {
   filter.value.keyword = search.value;
   filter.value.page = 1;
 }
-async function restore(row: any) {
+async function restore(row: Cost) {
   try {
     await request(`${w.base}/costs/${row.id}/restore`, "POST", {
       version: row.version,
     });
     await client.invalidateQueries({ queryKey: ["project", w.fid, w.pid] });
     w.notify("支出已恢复");
-  } catch (e: any) {
-    w.notify(e.message);
+  } catch (e) {
+    w.notify(errorMessage(e));
   }
 }
 </script>
@@ -96,17 +91,9 @@ async function restore(row: any) {
       /><button class="text-btn">搜索</button>
     </form>
     <div class="filter-row">
-      <select
-        v-model="filter.stageId"
-        aria-label="按阶段筛选"
-        @change="filter.page = 1"
-      >
+      <select v-model="filter.stageId" aria-label="按阶段筛选" @change="filter.page = 1">
         <option value="">全部阶段</option>
-        <option
-          v-for="s in stages.data.value?.data || []"
-          :key="s.id"
-          :value="s.id"
-        >
+        <option v-for="s in stages.data.value?.data || []" :key="s.id" :value="s.id">
           {{ s.name }}
         </option></select
       ><select
@@ -124,9 +111,7 @@ async function restore(row: any) {
       >
         <option value="">全部分类</option>
         <option
-          v-for="c in categories[
-            w.project?.packageType === 'full' ? 'full' : 'half'
-          ]"
+          v-for="c in categories[w.project?.packageType === 'full' ? 'full' : 'half']"
           :key="c"
         >
           {{ c }}
@@ -170,16 +155,12 @@ async function restore(row: any) {
     <template v-if="!filter.deleted"
       ><CostRows :items="rows" :stages="stages.data.value?.data"
     /></template>
-    <div v-else v-for="row in rows" :key="row.id" class="deleted-row">
+    <div v-for="row in rows" v-else :key="row.id" class="deleted-row">
       <div>
         <strong>{{ row.title }}</strong
         ><small>{{ money(row.amountCents) }} · 已删除</small>
       </div>
-      <button
-        v-if="w.canWrite"
-        class="btn secondary small-btn"
-        @click="restore(row)"
-      >
+      <button v-if="w.canWrite" class="btn secondary small-btn" @click="restore(row)">
         恢复
       </button>
     </div>

@@ -10,13 +10,13 @@ cp .env.docker.example .env.docker
 
 ## 先判断哪些参数必须填写
 
-| 部署方式 | 必须按实际情况填写 | 通常保留默认 | 可以留空或忽略 |
-| --- | --- | --- | --- |
-| 内置数据库 + 已有 HTTPS 代理 | APP_ORIGIN | APP_IMAGE、APP_IMAGE_TAG、APP_PORT | DOMAIN、DATA_DIR、全部 POSTGRES_*、全部 SMTP_* |
-| 内置数据库 + 随附 Caddy | APP_ORIGIN、DOMAIN | APP_IMAGE、APP_IMAGE_TAG、APP_PORT | DATA_DIR、全部 POSTGRES_*、全部 SMTP_* |
-| 已有外部 PostgreSQL | APP_ORIGIN、POSTGRES_HOST、POSTGRES_DB、POSTGRES_USER、POSTGRES_PASSWORD、POSTGRES_SSLMODE；使用 Caddy 时还填 DOMAIN | APP_IMAGE、APP_IMAGE_TAG、APP_PORT；POSTGRES_PORT 取数据库实际端口，通常 5432 | DATA_DIR、全部 SMTP_* |
-| Compose 自带 PostgreSQL | APP_ORIGIN、POSTGRES_PASSWORD；使用 Caddy 时还填 DOMAIN | APP_IMAGE、APP_IMAGE_TAG、APP_PORT、POSTGRES_DB、POSTGRES_USER | DATA_DIR、POSTGRES_HOST、POSTGRES_PORT、POSTGRES_SSLMODE、全部 SMTP_* |
-| 内置数据库改用宿主机目录 | 在所选内置方式基础上，再填 DATA_DIR | 其他同内置模式 | 全部 POSTGRES_* |
+| 部署方式                     | 必须按实际情况填写                                                                                                   | 通常保留默认                                                                  | 可以留空或忽略                                                        |
+| ---------------------------- | -------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------- | --------------------------------------------------------------------- |
+| 内置数据库 + 已有 HTTPS 代理 | APP_ORIGIN                                                                                                           | APP_IMAGE、APP_IMAGE_TAG、APP_PORT                                            | DOMAIN、DATA_DIR、全部 POSTGRES__、全部 SMTP__                        |
+| 内置数据库 + 随附 Caddy      | APP_ORIGIN、DOMAIN                                                                                                   | APP_IMAGE、APP_IMAGE_TAG、APP_PORT                                            | DATA_DIR、全部 POSTGRES__、全部 SMTP__                                |
+| 已有外部 PostgreSQL          | APP_ORIGIN、POSTGRES_HOST、POSTGRES_DB、POSTGRES_USER、POSTGRES_PASSWORD、POSTGRES_SSLMODE；使用 Caddy 时还填 DOMAIN | APP_IMAGE、APP_IMAGE_TAG、APP_PORT；POSTGRES_PORT 取数据库实际端口，通常 5432 | DATA_DIR、全部 SMTP_*                                                 |
+| Compose 自带 PostgreSQL      | APP_ORIGIN、POSTGRES_PASSWORD；使用 Caddy 时还填 DOMAIN                                                              | APP_IMAGE、APP_IMAGE_TAG、APP_PORT、POSTGRES_DB、POSTGRES_USER                | DATA_DIR、POSTGRES_HOST、POSTGRES_PORT、POSTGRES_SSLMODE、全部 SMTP_* |
+| 内置数据库改用宿主机目录     | 在所选内置方式基础上，再填 DATA_DIR                                                                                  | 其他同内置模式                                                                | 全部 POSTGRES_*                                                       |
 
 只有启用邮件找回密码时才填写 SMTP 参数。注册不验证邮箱，未配置 SMTP 不影响注册和登录。
 
@@ -24,14 +24,14 @@ cp .env.docker.example .env.docker
 
 ## 入口和镜像参数
 
-| 参数 | 是否必填 | 填什么 | 示例或默认 |
-| --- | --- | --- | --- |
-| APP_ORIGIN | 必填 | 用户浏览器实际访问的 HTTPS 来源，只含协议、域名和可选端口；不含路径、查询参数、结尾斜线 | `https://home.example.com` |
-| APP_IMAGE | 使用 GHCR 时保留默认即可 | 镜像名称，不包含 `:版本号`；仅 compose.image.yaml 使用 | `ghcr.io/dddyszy/renovation_assistant_web` |
-| APP_IMAGE_TAG | 可不改 | 已发布的镜像版本，不带 v；当前没有 latest 标签 | `0.9.5` |
-| APP_PORT | 可不改 | 宿主机回环端口，需未被占用，范围 1–65535 | `8080` |
-| DOMAIN | 使用 compose.https.yaml 时必填 | Caddy 申请证书的域名，不带 https://、端口、路径或结尾斜线 | `home.example.com` |
-| DATA_DIR | 使用 compose.bind.yaml 时必填 | 宿主机专用数据目录的绝对路径 | `/srv/zhu-jia/data` |
+| 参数          | 是否必填                       | 填什么                                                                                  | 示例或默认                                 |
+| ------------- | ------------------------------ | --------------------------------------------------------------------------------------- | ------------------------------------------ |
+| APP_ORIGIN    | 必填                           | 用户浏览器实际访问的 HTTPS 来源，只含协议、域名和可选端口；不含路径、查询参数、结尾斜线 | `https://home.example.com`                 |
+| APP_IMAGE     | 使用 GHCR 时保留默认即可       | 镜像名称，不包含 `:版本号`；仅 compose.image.yaml 使用                                  | `ghcr.io/dddyszy/renovation_assistant_web` |
+| APP_IMAGE_TAG | 可不改                         | 已发布的镜像版本，不带 v；当前没有 latest 标签                                          | `0.9.5`                                    |
+| APP_PORT      | 可不改                         | 宿主机回环端口，需未被占用，范围 1–65535                                                | `8080`                                     |
+| DOMAIN        | 使用 compose.https.yaml 时必填 | Caddy 申请证书的域名，不带 https://、端口、路径或结尾斜线                               | `home.example.com`                         |
+| DATA_DIR      | 使用 compose.bind.yaml 时必填  | 宿主机专用数据目录的绝对路径                                                            | `/srv/zhu-jia/data`                        |
 
 `APP_PORT=8080` 表示应用映射到 `127.0.0.1:8080`，不表示用户应访问 `http://服务器IP:8080`。用户访问的是 APP_ORIGIN 指定的 HTTPS 地址，代理再转发给应用。
 
@@ -41,14 +41,14 @@ cp .env.docker.example .env.docker
 
 ## 数据库参数
 
-| 参数 | 外部 PostgreSQL | Compose 自带 PostgreSQL | 内置 PGlite |
-| --- | --- | --- | --- |
-| POSTGRES_HOST | 填数据库真实域名/IP，必填 | 忽略，应用自动使用服务名 db | 忽略 |
-| POSTGRES_PORT | 填真实端口，通常 5432 | 忽略，容器之间固定使用 5432 | 忽略 |
-| POSTGRES_DB | 填已经创建的数据库名称 | 首次初始化创建该库，默认 zhu_jia | 忽略 |
-| POSTGRES_USER | 填数据库已有账号，需能创建表、索引及读写业务数据 | 首次初始化创建该账号，默认 zhu_jia | 忽略 |
-| POSTGRES_PASSWORD | 填该账号的真实密码，不能为空 | 自行设置随机密码，不能为空 | 忽略 |
-| POSTGRES_SSLMODE | 按服务器 TLS 要求填写，建议显式设置 | 忽略，配置固定使用 disable | 忽略 |
+| 参数              | 外部 PostgreSQL                                  | Compose 自带 PostgreSQL            | 内置 PGlite |
+| ----------------- | ------------------------------------------------ | ---------------------------------- | ----------- |
+| POSTGRES_HOST     | 填数据库真实域名/IP，必填                        | 忽略，应用自动使用服务名 db        | 忽略        |
+| POSTGRES_PORT     | 填真实端口，通常 5432                            | 忽略，容器之间固定使用 5432        | 忽略        |
+| POSTGRES_DB       | 填已经创建的数据库名称                           | 首次初始化创建该库，默认 zhu_jia   | 忽略        |
+| POSTGRES_USER     | 填数据库已有账号，需能创建表、索引及读写业务数据 | 首次初始化创建该账号，默认 zhu_jia | 忽略        |
+| POSTGRES_PASSWORD | 填该账号的真实密码，不能为空                     | 自行设置随机密码，不能为空         | 忽略        |
+| POSTGRES_SSLMODE  | 按服务器 TLS 要求填写，建议显式设置              | 忽略，配置固定使用 disable         | 忽略        |
 
 外部 PostgreSQL 的主机、库名、账号和密码必须与实际数据库一致，不能直接沿用示例中的 `db.example.internal`。`127.0.0.1` 指应用容器自身；数据库在宿主机上时可使用 `host.docker.internal`，同时配置宿主机数据库监听和访问权限。
 
@@ -65,13 +65,13 @@ Compose 将密码单独传给 PGPASSWORD，不必把特殊字符编码成 URL。
 
 ## 可选邮件参数
 
-| 参数 | 何时填写 | 示例 |
-| --- | --- | --- |
-| SMTP_HOST | 启用邮件找回时填邮件服务商地址 | `smtp.example.com` |
-| SMTP_PORT | 跟随服务商要求；通常 587 为 STARTTLS，465 为直接 TLS | `587` |
-| SMTP_USER | 服务商要求账号认证时填写，常为完整邮箱 | `noreply@example.com` |
-| SMTP_PASSWORD | 填 SMTP 授权码或服务商密码，不是网站用户密码 | 由邮件服务商提供 |
-| SMTP_FROM | 只要配置 SMTP_HOST 就必填；通常需通过服务商发信认证 | `'筑家手记 <noreply@example.com>'` |
+| 参数          | 何时填写                                             | 示例                               |
+| ------------- | ---------------------------------------------------- | ---------------------------------- |
+| SMTP_HOST     | 启用邮件找回时填邮件服务商地址                       | `smtp.example.com`                 |
+| SMTP_PORT     | 跟随服务商要求；通常 587 为 STARTTLS，465 为直接 TLS | `587`                              |
+| SMTP_USER     | 服务商要求账号认证时填写，常为完整邮箱               | `noreply@example.com`              |
+| SMTP_PASSWORD | 填 SMTP 授权码或服务商密码，不是网站用户密码         | 由邮件服务商提供                   |
+| SMTP_FROM     | 只要配置 SMTP_HOST 就必填；通常需通过服务商发信认证  | `'筑家手记 <noreply@example.com>'` |
 
 不需要邮件功能时保持 SMTP_HOST、SMTP_USER、SMTP_PASSWORD、SMTP_FROM 为空，SMTP_PORT 保留 587 即可。生产环境会明确提示邮件找回暂不可用，不会影响普通登录。
 

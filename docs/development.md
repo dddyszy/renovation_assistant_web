@@ -4,6 +4,8 @@
 
 ## 开发环境
 
+推荐 Node.js 24 LTS，最低 22.13。目录、命名与贡献约定见 [开发与协作规范](../CONTRIBUTING.md)。提交前运行 `npm run check`，自动修复与格式化分别使用 `npm run lint:fix`、`npm run format`。
+
 `npm run dev` 同时启动 Vite 与 Fastify。浏览器的 `/api/v1` 请求由 Vite 转发到本机 3001 端口。写请求必须携带同源 Origin 和应用请求头；开发环境允许本机及局域网的 5173 端口，未开放跨域 CORS。
 
 默认开发数据库是 `.data/postgres` 中的 PGlite。它运行 PostgreSQL 引擎并将数据落盘，适合本地与单进程体验。设置 `DATABASE_URL=postgresql://...`，或清空该变量并设置 PGHOST 等 PG 环境变量后，改用 pg 连接独立 PostgreSQL；两个适配器共用同一份 SQL schema。完整 PostgreSQL 部署默认使用 18，兼容 17；两种版本均已通过 CI 接口与容器验证，见 [PostgreSQL 部署说明](postgresql.md)。实际服务器的网络、权限和 TLS 仍需验证。

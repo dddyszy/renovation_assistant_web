@@ -44,10 +44,10 @@ docker compose --env-file .env.docker \
 
 ## 18 与 17 的目录和卷不同
 
-| 配置 | 数据库镜像 | 数据目录 PGDATA | 挂载目标 | 命名卷 |
-| --- | --- | --- | --- | --- |
-| compose.postgres.yaml 默认 | postgres:18-alpine | `/var/lib/postgresql/18/docker` | `/var/lib/postgresql` | `zhu-jia-web_postgres18_data` |
-| compose.postgres17.yaml 兼容 | postgres:17-alpine | `/var/lib/postgresql/data` | `/var/lib/postgresql/data` | `zhu-jia-web_postgres_data` |
+| 配置                         | 数据库镜像         | 数据目录 PGDATA                 | 挂载目标                   | 命名卷                        |
+| ---------------------------- | ------------------ | ------------------------------- | -------------------------- | ----------------------------- |
+| compose.postgres.yaml 默认   | postgres:18-alpine | `/var/lib/postgresql/18/docker` | `/var/lib/postgresql`      | `zhu-jia-web_postgres18_data` |
+| compose.postgres17.yaml 兼容 | postgres:17-alpine | `/var/lib/postgresql/data`      | `/var/lib/postgresql/data` | `zhu-jia-web_postgres_data`   |
 
 PostgreSQL 官方镜像从 18 起使用按主版本分目录的数据布局，详见 [官方 PGDATA 说明](https://github.com/docker-library/docs/blob/master/postgres/README.md#pgdata)。本项目用独立卷保存新 18 数据，不让新引擎直接打开原 17 文件。
 

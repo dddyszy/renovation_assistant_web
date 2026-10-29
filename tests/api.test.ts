@@ -1,3 +1,5 @@
+import type { HTTPMethods, InjectOptions } from "fastify";
+import type { Cost, Member } from "../shared/api.ts";
 import { test, before, after } from "node:test";
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
@@ -9,10 +11,15 @@ const origin = {
   origin: "http://localhost:5173",
   "x-requested-with": "zhu-jia-web",
 };
-async function api(path: string, method = "GET", payload?: any, cookie = "") {
+async function api(
+  path: string,
+  method: HTTPMethods = "GET",
+  payload?: InjectOptions["payload"],
+  cookie = "",
+) {
   const r = await app.inject({
     url: "/api/v1" + path,
-    method: method as any,
+    method,
     headers: { ...origin, ...(cookie ? { cookie } : {}) },
     payload,
   });
@@ -66,12 +73,7 @@ test("家庭隔离、邀请、只读权限、金额口径、版本冲突和幂�
   const owner = await account("owner"),
     member = await account("member"),
     outsider = await account("outsider");
-  const family = await api(
-    "/families",
-    "POST",
-    { name: "测试家庭" },
-    owner.cookie,
-  );
+  const family = await api("/families", "POST", { name: "测试家庭" }, owner.cookie);
   const fid = family.body.data.id;
   const root = `/families/${fid}`;
   const p = await api(
@@ -87,8 +89,7 @@ test("家庭隔离、邀请、只读权限、金额口径、版本冲突和幂�
   );
   assert.equal(p.status, 200);
   const base = `${root}/projects/${p.body.data.id}`;
-  const stages = (await api(base + "/stages", "GET", undefined, owner.cookie))
-    .body.data;
+  const stages = (await api(base + "/stages", "GET", undefined, owner.cookie)).body.data;
   assert.equal(stages.length, 9);
   assert.equal(
     (await api(base + "/statistics", "GET", undefined, outsider.cookie)).status,
@@ -102,18 +103,15 @@ test("家庭隔离、邀请、只读权限、金额口径、版本冲突和幂�
   );
   const token = invite.body.data.path.split("/").pop();
   assert.equal(
-    (await api(`/invitations/${token}/accept`, "POST", {}, member.cookie))
-      .status,
+    (await api(`/invitations/${token}/accept`, "POST", {}, member.cookie)).status,
     200,
   );
   assert.equal(
-    (await api(`/invitations/${token}/accept`, "POST", {}, outsider.cookie))
-      .status,
+    (await api(`/invitations/${token}/accept`, "POST", {}, outsider.cookie)).status,
     404,
   );
   assert.equal(
-    (await api(base + "/costs", "POST", { title: "越权" }, member.cookie))
-      .status,
+    (await api(base + "/costs", "POST", { title: "越权" }, member.cookie)).status,
     403,
   );
   assert.equal(
@@ -126,10 +124,7 @@ test("家庭隔离、邀请、只读权限、金额口径、版本冲突和幂�
     { role: "member" },
     owner.cookie,
   );
-  assert.equal(
-    (await api(root + "/projects", "POST", {}, member.cookie)).status,
-    403,
-  );
+  assert.equal((await api(root + "/projects", "POST", {}, member.cookie)).status, 403);
   const material = await api(
     base + "/materials",
     "POST",
@@ -157,14 +152,8 @@ test("家庭隔离、邀请、只读权限、金额口径、版本冲突和幂�
   const again = await api(base + "/costs", "POST", common, member.cookie);
   assert.equal(again.body.data.id, first.body.data.id);
   assert.equal(
-    (
-      await api(
-        base + "/costs",
-        "POST",
-        { ...common, title: "换了内容" },
-        member.cookie,
-      )
-    ).status,
+    (await api(base + "/costs", "POST", { ...common, title: "换了内容" }, member.cookie))
+      .status,
     409,
   );
   const pending = await api(
@@ -179,8 +168,7 @@ test("家庭隔离、邀请、只读权限、金额口径、版本冲突和幂�
     },
     owner.cookie,
   );
-  let stats = (await api(base + "/statistics", "GET", undefined, owner.cookie))
-    .body.data;
+  let stats = (await api(base + "/statistics", "GET", undefined, owner.cookie)).body.data;
   assert.equal(stats.totalCents, 300000);
   assert.equal(stats.paidCents, 100000);
   assert.equal(stats.pendingCents, 200000);
@@ -217,10 +205,9 @@ test("家庭隔离、邀请、只读权限、金额口径、版本冲突和幂�
     owner.cookie,
   );
   assert.equal(moved.status, 200);
-  const costs = (await api(base + "/costs", "GET", undefined, owner.cookie))
-    .body.data;
-  assert(costs.every((c: any) => c.stageId === stages[1].id));
-  const row = costs.find((c: any) => c.id === pending.body.data.id);
+  const costs = (await api(base + "/costs", "GET", undefined, owner.cookie)).body.data;
+  assert(costs.every((c: Cost) => c.stageId === stages[1].id));
+  const row = costs.find((c: Cost) => c.id === pending.body.data.id);
   const removed = await api(
     base + `/costs/${row.id}`,
     "DELETE",
@@ -228,8 +215,7 @@ test("家庭隔离、邀请、只读权限、金额口径、版本冲突和幂�
     member.cookie,
   );
   assert.equal(removed.status, 200);
-  stats = (await api(base + "/statistics", "GET", undefined, owner.cookie)).body
-    .data;
+  stats = (await api(base + "/statistics", "GET", undefined, owner.cookie)).body.data;
   assert.equal(stats.totalCents, 100000);
   assert.equal(
     (
@@ -243,14 +229,8 @@ test("家庭隔离、邀请、只读权限、金额口径、版本冲突和幂�
     200,
   );
   assert.equal(
-    (
-      await api(
-        base + `/stages/${stages[1].id}`,
-        "DELETE",
-        { version: 1 },
-        owner.cookie,
-      )
-    ).status,
+    (await api(base + `/stages/${stages[1].id}`, "DELETE", { version: 1 }, owner.cookie))
+      .status,
     409,
   );
   // A material in a different project cannot be linked, even when both projects share a family.
@@ -276,23 +256,17 @@ test("家庭隔离、邀请、只读权限、金额口径、版本冲突和幂�
     ).status,
     404,
   );
-  await api(
-    root + `/members/${member.user.id}`,
-    "DELETE",
-    undefined,
-    owner.cookie,
-  );
+  await api(root + `/members/${member.user.id}`, "DELETE", undefined, owner.cookie);
   assert.equal(
     (await api(base + "/statistics", "GET", undefined, member.cookie)).status,
     404,
   );
-  const counts = (
-    await api(base + "/costs?pageSize=1", "GET", undefined, owner.cookie)
-  ).body.meta;
+  const counts = (await api(base + "/costs?pageSize=1", "GET", undefined, owner.cookie))
+    .body.meta;
   assert.equal(counts.total, 2);
   assert.equal(counts.totalCents, 300000);
-  const logs = (await api(root + "/audit-logs", "GET", undefined, owner.cookie))
-    .body.data;
+  const logs = (await api(root + "/audit-logs", "GET", undefined, owner.cookie)).body
+    .data;
   assert(logs.length > 5);
   // Archive is read-only; restore preserves records and totals.
   const archive = await api(
@@ -336,10 +310,7 @@ test("邀请撤销、CSRF、会话撤销与密码重置", async () => {
   assert.equal(res.statusCode, 403);
   const family = await api("/families", "POST", { name: "安全测试" }, a.cookie);
   const fid = family.body.data.id;
-  assert.equal(
-    (await api(`/families/${fid}/leave`, "POST", {}, a.cookie)).status,
-    409,
-  );
+  assert.equal((await api(`/families/${fid}/leave`, "POST", {}, a.cookie)).status, 409);
   const inv = await api(
     `/families/${fid}/invitations`,
     "POST",
@@ -354,8 +325,7 @@ test("邀请撤销、CSRF、会话撤销与密码重置", async () => {
     a.cookie,
   );
   assert.equal(
-    (await api(`/invitations/${token}/preview`, "GET", undefined, a.cookie))
-      .status,
+    (await api(`/invitations/${token}/preview`, "GET", undefined, a.cookie)).status,
     404,
   );
   const reset = await api("/auth/reset/request", "POST", { email: a.email });
@@ -428,8 +398,7 @@ test("超过一页的账本仍按全集聚合，重复并发提交只生成一�
     new Set([...first.body.data, ...second.body.data].map((c) => c.id)).size,
     35,
   );
-  const stats = (await api(base + "/statistics", "GET", undefined, cookie)).body
-    .data;
+  const stats = (await api(base + "/statistics", "GET", undefined, cookie)).body.data;
   assert.equal(stats.totalCents, 3535);
   assert.equal(stats.paidCents, 1818);
   assert.equal(stats.pendingCents, 1717);
@@ -445,12 +414,7 @@ test("超过一页的账本仍按全集聚合，重复并发提交只生成一�
   );
   assert(responses.every((r) => r.status === 200));
   assert.equal(new Set(responses.map((r) => r.body.data.id)).size, 1);
-  const filtered = await api(
-    base + "/costs?category=人工",
-    "GET",
-    undefined,
-    cookie,
-  );
+  const filtered = await api(base + "/costs?category=人工", "GET", undefined, cookie);
   assert.equal(filtered.body.meta.total, 17);
   assert.equal(filtered.body.meta.totalCents, 1717);
   await api(
@@ -473,28 +437,16 @@ test("所有权转让、管理员边界、邀请过期与受保护的数据清�
       email: "member@example.test",
       password: "TestOnly!12345",
     });
-  const f = await api(
-    "/families",
-    "POST",
-    { name: "生命周期验收" },
-    owner.cookie,
-  );
+  const f = await api("/families", "POST", { name: "生命周期验收" }, owner.cookie);
   const root = `/families/${f.body.data.id}`;
-  const i = await api(
-      root + "/invitations",
-      "POST",
-      { role: "admin" },
-      owner.cookie,
-    ),
+  const i = await api(root + "/invitations", "POST", { role: "admin" }, owner.cookie),
     token = i.body.data.path.split("/").pop();
   assert.equal(
-    (await api(`/invitations/${token}/accept`, "POST", {}, member.cookie))
-      .status,
+    (await api(`/invitations/${token}/accept`, "POST", {}, member.cookie)).status,
     200,
   );
   assert.equal(
-    (await api(root + "/invitations", "POST", { role: "admin" }, member.cookie))
-      .status,
+    (await api(root + "/invitations", "POST", { role: "admin" }, member.cookie)).status,
     403,
   );
   const expired = await api(
@@ -541,12 +493,7 @@ test("所有权转让、管理员边界、邀请过期与受保护的数据清�
     ).status,
     422,
   );
-  await api(
-    base + "/archive",
-    "POST",
-    { version: 1, archived: true },
-    owner.cookie,
-  );
+  await api(base + "/archive", "POST", { version: 1, archived: true }, owner.cookie);
   assert.equal(
     (
       await api(
@@ -569,23 +516,16 @@ test("所有权转让、管理员边界、邀请过期与受保护的数据清�
     ).status,
     200,
   );
-  const members = (await api(root + "/members", "GET", undefined, owner.cookie))
-    .body.data;
-  const target = members.find((m: any) => m.id !== owner.body.data.id);
+  const members = (await api(root + "/members", "GET", undefined, owner.cookie)).body
+    .data;
+  const target = members.find((m: Member) => m.id !== owner.body.data.id);
   assert.equal(
-    (
-      await api(
-        root + "/transfer-ownership",
-        "POST",
-        { userId: target.id },
-        owner.cookie,
-      )
-    ).status,
+    (await api(root + "/transfer-ownership", "POST", { userId: target.id }, owner.cookie))
+      .status,
     200,
   );
-  const after = (await api(root + "/members", "GET", undefined, member.cookie))
-    .body.data;
-  assert.equal(after.filter((m: any) => m.role === "owner").length, 1);
+  const after = (await api(root + "/members", "GET", undefined, member.cookie)).body.data;
+  assert.equal(after.filter((m: Member) => m.role === "owner").length, 1);
   assert.equal(
     (
       await api(
@@ -630,10 +570,7 @@ test("注册无需验证码，邮箱规范化去重并保留密码强度校验",
     (await api("/me", "GET", undefined, login.cookie)).body.data.nickname,
     body.nickname,
   );
-  assert.equal(
-    (await api("/auth/logout", "POST", undefined, login.cookie)).status,
-    200,
-  );
+  assert.equal((await api("/auth/logout", "POST", undefined, login.cookie)).status, 200);
   assert.equal((await api("/me", "GET", undefined, login.cookie)).status, 401);
   const duplicate = await api("/auth/register", "POST", {
     ...body,
@@ -656,8 +593,7 @@ test("注册无需验证码，邮箱规范化去重并保留密码强度校验",
     422,
   );
   assert.equal(
-    (await api("/auth/register/request-code", "POST", { email: body.email }))
-      .status,
+    (await api("/auth/register/request-code", "POST", { email: body.email })).status,
     404,
   );
 });

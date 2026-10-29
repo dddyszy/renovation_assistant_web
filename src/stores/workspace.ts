@@ -1,11 +1,14 @@
+import type { User, Family, Project } from "../../shared/api";
 import { computed, ref, watch } from "vue";
 import { defineStore } from "pinia";
-import { request } from "./api";
+import { request, HttpError, errorMessage } from "../services/api";
+// The shared modal accepts partial drafts for several resource shapes.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- constrained to dynamic modal drafts
 export type Item = Record<string, any>;
 export const useWorkspace = defineStore("workspace", () => {
-  const user = ref<Item | null>(null),
-    families = ref<Item[]>([]),
-    projects = ref<Item[]>([]);
+  const user = ref<User | null>(null),
+    families = ref<Family[]>([]),
+    projects = ref<Project[]>([]);
   const fid = ref(""),
     pid = ref(""),
     ready = ref(false),
@@ -29,9 +32,7 @@ export const useWorkspace = defineStore("workspace", () => {
   }
   const family = computed(() => families.value.find((f) => f.id === fid.value)),
     project = computed(() =>
-      projects.value.find(
-        (p) => p.id === pid.value && p.familyId === fid.value,
-      ),
+      projects.value.find((p) => p.id === pid.value && p.familyId === fid.value),
     );
   const canWrite = computed(
     () =>
@@ -40,9 +41,7 @@ export const useWorkspace = defineStore("workspace", () => {
       family.value.role !== "viewer" &&
       project.value.status !== "archived",
   );
-  const isAdmin = computed(() =>
-    ["owner", "admin"].includes(family.value?.role),
-  );
+  const isAdmin = computed(() => ["owner", "admin"].includes(family.value?.role || ""));
   const base = computed(() => `/families/${fid.value}/projects/${pid.value}`);
   function open(type: string, item: Item | null = null) {
     editing.value = item;
@@ -63,7 +62,7 @@ export const useWorkspace = defineStore("workspace", () => {
     close();
   }
   async function loadFamilies() {
-    const { data } = await request<Item[]>("/families");
+    const { data } = await request<Family[]>("/families");
     families.value = data;
     if (!data.some((f) => f.id === fid.value)) fid.value = data[0]?.id || "";
     await loadProjects();
@@ -79,35 +78,28 @@ export const useWorkspace = defineStore("workspace", () => {
       projects.value = [];
       pid.value = "";
     }
-    const { data } = await request<Item[]>(
-      `/families/${selectedFamily}/projects`,
-    );
+    const { data } = await request<Project[]>(`/families/${selectedFamily}/projects`);
     if (fid.value !== selectedFamily) return;
     projects.value = data;
     if (!data.some((p) => p.id === pid.value))
-      pid.value =
-        data.find((p) => p.status === "active")?.id || data[0]?.id || "";
+      pid.value = data.find((p) => p.status === "active")?.id || data[0]?.id || "";
   }
   async function bootstrap() {
     failure.value = "";
     try {
-      user.value = (await request("/me")).data;
+      user.value = (await request<User>("/me")).data;
       let context: Item = {};
       try {
-        context = JSON.parse(
-          localStorage.getItem(`context:${user.value!.id}`) || "{}",
-        );
+        context = JSON.parse(localStorage.getItem(`context:${user.value!.id}`) || "{}");
       } catch {
         /* Ignore invalid local preferences. */
       }
       const url = new URLSearchParams(window.location.search);
-      fid.value =
-        url.get("family") || user.value!.currentFamilyId || context.fid || "";
-      pid.value =
-        url.get("project") || user.value!.currentProjectId || context.pid || "";
+      fid.value = url.get("family") || user.value!.currentFamilyId || context.fid || "";
+      pid.value = url.get("project") || user.value!.currentProjectId || context.pid || "";
       await loadFamilies();
-    } catch (e: any) {
-      if (e.status !== 401) failure.value = e.message;
+    } catch (e) {
+      if (!(e instanceof HttpError) || e.status !== 401) failure.value = errorMessage(e);
       clear();
     } finally {
       ready.value = true;

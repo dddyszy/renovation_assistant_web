@@ -12,11 +12,10 @@ package.json 是应用版本来源，package-lock.json 根版本须同步。`sha
 
 ```bash
 npm ci
-npm run build
-npm test
+npm run check
 ```
 
-使用专用 PostgreSQL 测试库再运行一次集成测试，环境变量 `TEST_DATABASE_URL` 指向该测试库。不可指向生产数据库。
+分别使用专用 PostgreSQL 18、17 测试库运行集成测试，环境变量 `TEST_DATABASE_URL` 指向该测试库。不可指向生产数据库。
 
 Docker 环境运行内置、外置配置验证，并构建对应架构镜像。源仓库已上传到 GitHub，普通 CI 负责校验；`publish-image.yml` 负责将通过验证的 AMD64/ARM64 镜像发布到 GHCR，见 [容器镜像仓库](container-registry.md)。
 

@@ -1,6 +1,6 @@
 import "dotenv/config";
 import { resolve } from "node:path";
-import { createDb, type Db, type Row } from "../server/db.ts";
+import { createDb, type Db } from "../server/db.ts";
 
 // Tables are in foreign-key order. Active sessions and reset tokens intentionally expire at cutover.
 const tables = [
@@ -33,33 +33,24 @@ try {
   source = await createDb(sourceLocation);
   target = await createDb(targetLocation);
   await source.transaction(async (origin) => {
-    await origin.query(
-      "SET TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY",
-    );
+    await origin.query("SET TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY");
     const counts: Record<string, number> = {};
     for (const table of tables) {
-      const [row] = await origin.query(
-        `SELECT count(*)::int AS count FROM ${table}`,
-      );
+      const [row] = await origin.query(`SELECT count(*)::int AS count FROM ${table}`);
       counts[table] = row!.count;
     }
-    if (!counts.users)
-      throw new Error("源数据库没有账号，请检查源地址；未执行迁移");
+    if (!counts.users) throw new Error("源数据库没有账号，请检查源地址；未执行迁移");
     await target!.transaction(async (destination) => {
       for (const table of [...tables, "sessions", "verification_tokens"]) {
         const [row] = await destination.query(
           `SELECT count(*)::int AS count FROM ${table}`,
         );
         if (row!.count)
-          throw new Error(
-            `目标表 ${table} 非空；仅支持迁移到全新数据库，不合并或覆盖`,
-          );
+          throw new Error(`目标表 ${table} 非空；仅支持迁移到全新数据库，不合并或覆盖`);
       }
       console.table(counts);
       if (!apply) {
-        console.log(
-          "预检通过，未复制记录。停止源/目标应用写入后，加 --apply 执行迁移。",
-        );
+        console.log("预检通过，未复制记录。停止源/目标应用写入后，加 --apply 执行迁移。");
         return;
       }
       for (const table of tables) {
@@ -98,8 +89,7 @@ try {
         const sql = `SELECT COALESCE(sum(${field}),0)::text AS total FROM ${table}`;
         const [before] = await origin.query(sql),
           [after] = await destination.query(sql);
-        if (before!.total !== after!.total)
-          throw new Error(`${table} 金额校验不一致`);
+        if (before!.total !== after!.total) throw new Error(`${table} 金额校验不一致`);
       }
     });
   });

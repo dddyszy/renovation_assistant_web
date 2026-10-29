@@ -6,7 +6,7 @@
 
 ## 本地运行
 
-需要 Node.js 22.12 或更高版本。
+推荐 Node.js 24 LTS，最低 22.13；可使用 `nvm use` 读取仓库版本。开发约定见 [开发与协作规范](CONTRIBUTING.md)。
 
 ```bash
 npm ci
@@ -94,9 +94,12 @@ docker compose --env-file .env.docker -f compose.yaml -f compose.postgres17.yaml
 ## 检查与构建
 
 ```bash
-npm test       # 金额、导入规则和真实 PostgreSQL 引擎上的 API 集成测试
-npm run build # 前端及服务端类型检查，生成 dist
-npm audit     # 依赖安全检查
+npm run check      # lint、格式、类型、构建和测试的统一入口
+npm run lint:fix   # 自动修复可处理的代码问题
+npm run format     # 统一格式
+npm run typecheck  # 仅检查类型
+npm test           # HTTP 客户端、领域规则、API、数据库和迁移
+npm run build      # 生产构建，生成 dist
 ```
 
 集成测试覆盖家庭隔离、只读权限、邀请、成员移除、所有权转让、密码重置、跨项目关联拒绝、金额聚合、分页、并发重复提交、版本冲突、软删除恢复、项目归档与永久清理。
@@ -104,9 +107,9 @@ npm audit     # 依赖安全检查
 ## 目录
 
 ```text
-src/                  Vue 前端、按路由加载的页面及共用组件
-server/               Fastify API、PostgreSQL 适配层和初始 schema
-shared/               金额、流程模板、角色和备忘导入规则
+src/                  Vue 前端，分为 router/services/stores/composables/views/components/styles
+server/               Fastify 装配入口、业务路由、权限上下文、公共辅助函数与数据库适配
+shared/               API 类型、金额、流程模板、角色和备忘导入规则
 public/               PWA 图标、manifest、Service Worker
 scripts/demo.ts       显式生成本地演示数据
 scripts/              存储迁移、备份、压缩与容器 HTTP 验收
@@ -120,7 +123,7 @@ compose*.yaml         内置/外置数据库、HTTPS、目录挂载组合
 
 - 旧小程序云端数据尚未导入，迁移方案见设计文档；没有修改原项目或连接其数据库进行写入。
 - 手机端为响应式网页/PWA，尚未进行 iOS/Android 真机全机型验收。
-- 已完成本机独立 PostgreSQL 17 集成验证；Docker 引擎、真实 SMTP、域名证书和目标服务器仍需环境验收，详见开发与验收说明。
+- 已完成 PostgreSQL 18 / 17 CI 和 Docker 验证；真实 SMTP、域名证书和目标服务器仍需环境验收，详见开发与验收说明。
 - 头像当前使用昵称首字，文件上传、账号注销和外部施工方权限尚未实现。
 - 断网保留本地记账草稿；不支持离线写入同步。操作动态保留动作、对象与操作者，尚未提供逐字段修改前后对比。
 - 初始 schema 可重复初始化；后续数据结构升级应增加有版本号的迁移脚本，不能直接依赖修改 `CREATE TABLE IF NOT EXISTS`。

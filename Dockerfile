@@ -6,7 +6,7 @@ RUN npm ci --no-audit --no-fund
 
 FROM dependencies AS build
 COPY . .
-RUN npm run build && npm test
+RUN npm run check
 
 FROM node:24-bookworm-slim AS production-dependencies
 WORKDIR /app

@@ -9,37 +9,29 @@ import { createDb, type Db } from "../server/db.ts";
 test("存储迁移默认预检，保留金额/JSON/软删除并拒绝覆盖非空目标", async () => {
   const directory = await mkdtemp(join(tmpdir(), "zhu-jia-migration-"));
   const source = join(directory, "source"),
-    target =
-      process.env.TEST_MIGRATION_TARGET_DATABASE || join(directory, "target");
+    target = process.env.TEST_MIGRATION_TARGET_DATABASE || join(directory, "target");
   let db: Db | undefined;
   async function migrate(apply = false) {
-    return new Promise<{ code: number | null; output: string }>(
-      (resolve, reject) => {
-        const child = spawn(
-          process.execPath,
-          [
-            "--import",
-            "tsx",
-            "scripts/migrate-storage.ts",
-            ...(apply ? ["--apply"] : []),
-          ],
-          {
-            cwd: process.cwd(),
-            env: {
-              ...process.env,
-              SOURCE_DATABASE: source,
-              TARGET_DATABASE: target,
-            },
-            stdio: ["ignore", "pipe", "pipe"],
+    return new Promise<{ code: number | null; output: string }>((resolve, reject) => {
+      const child = spawn(
+        process.execPath,
+        ["--import", "tsx", "scripts/migrate-storage.ts", ...(apply ? ["--apply"] : [])],
+        {
+          cwd: process.cwd(),
+          env: {
+            ...process.env,
+            SOURCE_DATABASE: source,
+            TARGET_DATABASE: target,
           },
-        );
-        let output = "";
-        child.stdout.on("data", (d) => (output += d));
-        child.stderr.on("data", (d) => (output += d));
-        child.on("error", reject);
-        child.on("exit", (code) => resolve({ code, output }));
-      },
-    );
+          stdio: ["ignore", "pipe", "pipe"],
+        },
+      );
+      let output = "";
+      child.stdout.on("data", (d) => (output += d));
+      child.stderr.on("data", (d) => (output += d));
+      child.on("error", reject);
+      child.on("exit", (code) => resolve({ code, output }));
+    });
   }
   try {
     db = await createDb(source);
@@ -97,10 +89,10 @@ test("存储迁移默认预检，保留金额/JSON/软删除并拒绝覆盖非�
     const applied = await migrate(true);
     assert.equal(applied.code, 0, applied.output);
     db = await createDb(target);
-    assert.deepEqual(
-      (await db.query("SELECT details FROM notes"))[0]?.details,
-      ["插座位置", "保留管线照片"],
-    );
+    assert.deepEqual((await db.query("SELECT details FROM notes"))[0]?.details, [
+      "插座位置",
+      "保留管线照片",
+    ]);
     assert.equal(
       (
         await db.query(
@@ -121,10 +113,7 @@ test("存储迁移默认预检，保留金额/JSON/软删除并拒绝覆盖非�
       (await db.query("SELECT count(*)::int AS count FROM sessions"))[0]?.count,
       0,
     );
-    assert.equal(
-      (await db.query("SELECT * FROM user_preferences"))[0]?.projectId,
-      "p",
-    );
+    assert.equal((await db.query("SELECT * FROM user_preferences"))[0]?.projectId, "p");
     assert.equal(
       (await db.query("SELECT password_hash FROM users"))[0]?.passwordHash,
       "fixture-only-hash",

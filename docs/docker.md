@@ -6,12 +6,12 @@
 
 ## 选择存储方式
 
-| 模式 | 数据存在哪里 | 配置文件 | 适用情况 |
-| --- | --- | --- | --- |
-| 内置数据库 | 应用使用 PGlite，目录持久化到 Docker 卷 | `compose.yaml` | 个人或单个家庭，最少组件 |
-| 外部 PostgreSQL | 独立服务器、云数据库或已有 PostgreSQL | 再加 `compose.external.yaml` | 数据库已有专人维护，应用与存储分离 |
-| Compose 自带 PostgreSQL 18（默认） | 单独数据库容器及独立数据卷 | 再加 `compose.postgres.yaml` | 推荐的完整 PostgreSQL 部署 |
-| PostgreSQL 17 兼容 | 单独数据库容器及原有 17 卷 | 改用 `compose.postgres17.yaml` | 已有 17 数据或仍需使用 17 |
+| 模式                               | 数据存在哪里                            | 配置文件                       | 适用情况                           |
+| ---------------------------------- | --------------------------------------- | ------------------------------ | ---------------------------------- |
+| 内置数据库                         | 应用使用 PGlite，目录持久化到 Docker 卷 | `compose.yaml`                 | 个人或单个家庭，最少组件           |
+| 外部 PostgreSQL                    | 独立服务器、云数据库或已有 PostgreSQL   | 再加 `compose.external.yaml`   | 数据库已有专人维护，应用与存储分离 |
+| Compose 自带 PostgreSQL 18（默认） | 单独数据库容器及独立数据卷              | 再加 `compose.postgres.yaml`   | 推荐的完整 PostgreSQL 部署         |
+| PostgreSQL 17 兼容                 | 单独数据库容器及原有 17 卷              | 改用 `compose.postgres17.yaml` | 已有 17 数据或仍需使用 17          |
 
 这三种模式共用同一套业务表和权限规则。内置模式只运行一个应用实例；外部 PostgreSQL 可以让应用容器独立重建。当前限流在应用进程内，尚不建议直接扩成多个应用副本。
 
