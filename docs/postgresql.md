@@ -92,3 +92,9 @@ sh scripts/backup-postgres.sh .env.docker 17
 脚本在实际数据库容器中调用对应版本的 pg_dump。自行使用宿主机工具时，18 服务应配套使用 18 客户端，不能用 17 的 pg_dump 备份 18 服务。
 
 CI 分别连接 18 和 17 执行 API、金额、权限与迁移测试，并检查服务真实主版本。另有手动工作流 `verify-image.yml`，用已发布的 0.9.5 镜像测试对应 PostgreSQL 版本，验证数据库容器重建后的持久化、记账接口与备份恢复。
+
+0.9.5 已通过以下实际验证：
+
+- [CI：PostgreSQL 18 / 17 与三种 Docker 存储配置](https://github.com/dddyszy/renovation_assistant_web/actions/runs/40908628585)。
+- [已发布镜像 + PostgreSQL 18：持久化、接口与备份恢复](https://github.com/dddyszy/renovation_assistant_web/actions/runs/40908628969)。
+- [已发布镜像 + PostgreSQL 17：持久化、接口与备份恢复](https://github.com/dddyszy/renovation_assistant_web/actions/runs/40908635859)。
