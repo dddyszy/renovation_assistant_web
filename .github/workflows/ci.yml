@@ -1,0 +1,71 @@
+name: Verify 0.9.5
+on: [push, pull_request, workflow_dispatch]
+permissions:
+  contents: read
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_DB: zhu_jia_test
+          POSTGRES_USER: zhu_jia
+          POSTGRES_PASSWORD: ci-test-password
+        ports: ["5432:5432"]
+        options: --health-cmd "pg_isready -U zhu_jia -d zhu_jia_test" --health-interval 5s --health-timeout 5s --health-retries 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - run: npm test
+      - name: Prepare disposable migration target
+        run: node --input-type=module -e "import pg from 'pg'; const pool=new pg.Pool({connectionString:process.env.TEST_DATABASE_URL}); try { await pool.query('CREATE DATABASE zhu_jia_migration') } finally { await pool.end() }"
+        env:
+          TEST_DATABASE_URL: postgresql://zhu_jia:ci-test-password@localhost:5432/zhu_jia_test
+      - run: npm test
+        env:
+          TEST_DATABASE_URL: postgresql://zhu_jia:ci-test-password@localhost:5432/zhu_jia_test
+          TEST_MIGRATION_TARGET_DATABASE: postgresql://zhu_jia:ci-test-password@localhost:5432/zhu_jia_migration
+  docker:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        storage: [embedded, postgres]
+    env:
+      APP_ORIGIN: https://renovation.example.test
+      POSTGRES_HOST: external.example.test
+      POSTGRES_PASSWORD: "ci:test@password/with%characters#"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Validate all Compose storage modes
+        run: |
+          docker compose -f compose.yaml config --quiet
+          docker compose -f compose.yaml -f compose.external.yaml config --quiet
+          docker compose -f compose.yaml -f compose.postgres.yaml config --quiet
+          DATA_DIR=/tmp/zhu-jia docker compose -f compose.yaml -f compose.bind.yaml config --quiet
+          DOMAIN=renovation.example.test docker compose -f compose.yaml -f compose.https.yaml config --quiet
+      - name: Build and start
+        run: |
+          if [ '${{ matrix.storage }}' = postgres ]; then
+            docker compose -f compose.yaml -f compose.postgres.yaml up -d --build --wait --wait-timeout 180
+          else
+            docker compose -f compose.yaml up -d --build --wait --wait-timeout 180
+          fi
+      - run: node scripts/docker-smoke.mjs
+        env:
+          SMOKE_ALLOW_WRITE: "yes"
+          SMOKE_ORIGIN: https://renovation.example.test
+      - name: Show logs on failure
+        if: failure()
+        run: docker compose -f compose.yaml -f compose.postgres.yaml logs --tail 100
+      - name: Remove disposable CI containers and volumes
+        if: always()
+        run: docker compose -f compose.yaml -f compose.postgres.yaml down -v --remove-orphans

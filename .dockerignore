@@ -1,0 +1,13 @@
+node_modules
+dist
+.data
+.env
+.env.*
+.npmrc
+.git
+.github
+artifacts
+backups
+coverage
+*.log
+.DS_Store

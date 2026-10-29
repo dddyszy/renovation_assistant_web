@@ -1,0 +1,86 @@
+# 运维手册
+
+版本：0.9.5。运行命令应始终使用同一份 `.env.docker` 和同一组 Compose 配置，避免误启用另一种存储模式。
+
+## 查看运行状态
+
+以下例子为内置模式，外置/自带 PostgreSQL 时加入相应配置文件：
+
+```bash
+docker compose --env-file .env.docker -f compose.yaml ps
+docker compose --env-file .env.docker -f compose.yaml logs --tail 100 app
+curl --fail http://127.0.0.1:8080/api/v1/health
+```
+
+健康检查确认 API 与数据库查询均可用，并显示版本 0.9.5。它不代表邮件投递、证书签发或全部浏览器交互已经验证。
+
+日志默认每个文件 10 MB、最多 3 个，不记录普通请求 URL 或 Cookie。向别人提供日志前检查数据库地址等环境信息，不复制 `.env.docker`。
+
+## 内置模式备份
+
+先停止应用，确保 PGlite 正常关闭，再备份完整数据卷：
+
+```bash
+docker compose --env-file .env.docker -f compose.yaml stop app
+mkdir -p backups
+chmod 700 backups
+docker run --rm \
+  -v zhu-jia-web_app_data:/source:ro \
+  -v "$(pwd)/backups:/backup" \
+  alpine:3.22 tar -C /source -czf /backup/embedded-0.9.5.tar.gz .
+docker compose --env-file .env.docker -f compose.yaml start app
+```
+
+每次备份使用新的文件名，避免覆盖唯一副本。目录挂载模式备份对应宿主机 DATA_DIR，仍先停止应用。不能将运行中的部分数据库文件复制为可靠备份。
+
+恢复时先解压到一个新的空卷或空目录，保持 UID/GID 1000 可写，使用隔离应用实例核对账号、项目、金额和备忘，再切换正式挂载。不要把归档直接解压覆盖运行中的目录。
+
+## PostgreSQL 备份
+
+同 Compose 启动的数据库可使用脚本：
+
+```bash
+sh scripts/backup-postgres.sh .env.docker
+```
+
+脚本在容器内执行 pg_dump，自定义格式输出到 `backups/`，文件权限仅限当前用户；失败时移除不完整文件。文件名使用 UTC 时间戳。
+
+外部 PostgreSQL 使用服务商快照或自己的 pg_dump，备份包括用户、家庭、账目与密码哈希。文件备份与数据库备份采用不同方式，不能用只备份应用镜像代替数据库备份。
+
+恢复演练应使用新数据库：
+
+```bash
+# 使用已配置 PGHOST/PGPORT/PGUSER/PGPASSWORD 的管理环境。
+createdb zhu_jia_restore_check
+pg_restore --no-owner --no-privileges --dbname=zhu_jia_restore_check backups/替换为备份文件.dump
+```
+
+确认记录和统计后，再制定正式恢复窗口。覆盖现有数据库会替换写入后的数据，先保全当前数据，并停止相关应用写入。
+
+## 升级与回滚
+
+1. 保存当前镜像标签、配置和数据库备份。
+2. 获取新版本源码或镜像，阅读 CHANGELOG 和 schema 变更说明。
+3. 使用原存储配置执行 `up -d --build --wait`；不要加 `-v` 删除卷。
+4. 检查健康接口版本，登录后检查家庭、项目、已付/待付、材料和备忘。
+5. 只有完成真实业务检查后，才结束升级窗口。
+
+仅应用代码变更且 schema 兼容时，可以切回旧镜像。涉及结构或数据迁移时，回滚必须匹配数据库版本，并处理新版本产生的增量，不能直接用旧备份覆盖。
+
+切换存储模式不是普通升级：新的数据库可能为空，按 [存储迁移](storage-migration.md) 操作。
+
+## 常见问题
+
+| 现象 | 检查方向 |
+| --- | --- |
+| 注册成功但浏览器一直未登录 | 是否通过 HTTPS 访问；APP_ORIGIN 与实际来源是否一致 |
+| API 返回来源无效 | 协议、域名、端口或结尾斜线是否与 APP_ORIGIN 不一致 |
+| 内置模式重建后看到空库 | 是否换了 Compose 项目名、卷名或 DATA_DIR；不要马上创建同名数据覆盖判断依据 |
+| 内置数据库无法启动 | 是否有另一个进程同时打开同一目录；文件权限是否允许 UID 1000 写入 |
+| 外置数据库连接失败 | PGHOST 是否误填容器内 localhost、账号授权、网络或 TLS 是否匹配 |
+| 自带 PostgreSQL 修改密码后连接失败 | 环境变量不会重设已有数据库密码，应先修改数据库账号密码 |
+| 生成邀请正常但朋友打不开 | 分享地址是否为朋友可访问的域名；localhost 只对当前设备有效 |
+| 找回密码提示未开通 | SMTP 可选，配置真实发信服务后重试 |
+| 家人修改后暂时没变化 | 活动页面约 30 秒刷新，也可重新聚焦窗口或手动刷新 |
+
+建议备份至少保留一份服务器之外的副本，定期恢复演练；具体频率与保留期由实际使用者确定。当前版本没有自动备份调度和监控告警服务。

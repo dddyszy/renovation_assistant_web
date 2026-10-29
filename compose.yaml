@@ -1,0 +1,38 @@
+name: zhu-jia-web
+services:
+  app:
+    image: zhu-jia-web:${APP_IMAGE_TAG:-0.9.5}
+    build:
+      context: .
+      args:
+        APP_VERSION: ${APP_IMAGE_TAG:-0.9.5}
+    init: true
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      HOST: 0.0.0.0
+      PORT: "3001"
+      APP_ORIGIN: ${APP_ORIGIN:?Set APP_ORIGIN to your HTTPS origin}
+      DATABASE_URL: /app/data/postgres
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      SMTP_FROM: ${SMTP_FROM:-}
+    ports:
+      - "127.0.0.1:${APP_PORT:-8080}:3001"
+    volumes:
+      - app_data:/app/data
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=128m
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    stop_grace_period: 40s
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+volumes:
+  app_data:

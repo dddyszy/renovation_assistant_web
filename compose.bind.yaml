@@ -1,0 +1,7 @@
+# Optional: replace the embedded database's named volume with a host directory.
+services:
+  app:
+    volumes: !override
+      - type: bind
+        source: ${DATA_DIR:?Set an absolute DATA_DIR on the host}
+        target: /app/data
