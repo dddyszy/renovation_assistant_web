@@ -125,7 +125,7 @@ docker compose --env-file .env.docker -f compose.yaml -f compose.image.yaml -f c
 
 示例的数据库密码和地址是占位值，需要替换。无 TLS 的内网数据库按实际要求改为 disable；使用 Caddy 时继续增加 DOMAIN 和 `-f compose.https.yaml`。
 
-## 示例四：Compose 创建并管理 PostgreSQL
+## 示例四：Compose 创建 PostgreSQL 18，兼容 17
 
 在示例一配置中增加：
 
@@ -139,7 +139,9 @@ POSTGRES_PASSWORD='这里填你生成的随机密码'
 docker compose --env-file .env.docker -f compose.yaml -f compose.image.yaml -f compose.postgres.yaml up -d --no-build --wait
 ```
 
-替换密码占位值。无需填写 POSTGRES_HOST、POSTGRES_PORT、POSTGRES_SSLMODE，配置会让应用连接 db:5432。
+替换密码占位值。默认启动 PostgreSQL 18；需要兼容 17 时，把数据库配置换成 `-f compose.postgres17.yaml`。无需填写 POSTGRES_HOST、POSTGRES_PORT、POSTGRES_SSLMODE，配置会让应用连接 db:5432。
+
+18 与 17 使用不同命名卷和目录布局，已有 17 数据不要只改镜像版本，见 [PostgreSQL 部署和升级](postgresql.md)。
 
 ## 可选：内置存储放到指定宿主机目录
 

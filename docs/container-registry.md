@@ -77,6 +77,8 @@ docker compose --env-file .env.docker -f compose.yaml -f compose.image.yaml -f c
 docker compose --env-file .env.docker -f compose.yaml -f compose.image.yaml -f compose.postgres.yaml up -d --no-build --wait
 ```
 
+上述命令默认使用 PostgreSQL 18。需要兼容 17 时将数据库配置换成 `-f compose.postgres17.yaml`，应用镜像地址不变。已有数据库跨主版本升级需迁移数据，见 [PostgreSQL 说明](postgresql.md)。
+
 HTTPS 代理、内置数据目录挂载均可继续叠加对应配置，规则见 [Docker 部署](docker.md)。`compose.image.yaml` 删除 build 配置并启用镜像拉取，服务器不会构建。
 
 ## 不用 Compose 的内置模式示例

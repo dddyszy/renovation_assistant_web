@@ -43,6 +43,8 @@ npm run demo
 
 支持内置数据库和外置 PostgreSQL，也提供同 Compose 启动 PostgreSQL 的配置。Docker Compose 需要 2.24.4 及以上。
 
+完整 PostgreSQL 部署以 **18 为默认，兼容 17**，推荐直接拉取已发布镜像配合默认数据库配置使用；详见 [PostgreSQL 部署与升级](docs/postgresql.md)。
+
 ```bash
 cp .env.docker.example .env.docker
 # 编辑 APP_ORIGIN，填写真实 HTTPS 来源。需要 Caddy 时同时填写 DOMAIN。
@@ -53,8 +55,11 @@ docker compose --env-file .env.docker -f compose.yaml up -d --build --wait
 # 或连接已有 PostgreSQL，先填写 POSTGRES_*。
 docker compose --env-file .env.docker -f compose.yaml -f compose.external.yaml up -d --build --wait
 
-# 或由 Compose 一起运行独立 PostgreSQL 容器。
+# 或由 Compose 一起运行独立 PostgreSQL 18 容器（默认版本）。
 docker compose --env-file .env.docker -f compose.yaml -f compose.postgres.yaml up -d --build --wait
+
+# 兼容已有 PostgreSQL 17；继续使用原 17 数据卷。
+docker compose --env-file .env.docker -f compose.yaml -f compose.postgres17.yaml up -d --build --wait
 ```
 
 三种模式选择其一。已有代理转发到 `127.0.0.1:8080`；没有代理时可加 `-f compose.https.yaml` 使用 Caddy。生产浏览器通过 HTTPS 访问。

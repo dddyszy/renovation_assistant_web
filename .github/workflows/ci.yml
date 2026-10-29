@@ -8,10 +8,13 @@ permissions:
   contents: read
 jobs:
   quality:
+    strategy:
+      matrix:
+        postgres: [18, 17]
     runs-on: ubuntu-latest
     services:
       postgres:
-        image: postgres:17-alpine
+        image: postgres:${{ matrix.postgres }}-alpine
         env:
           POSTGRES_DB: zhu_jia_test
           POSTGRES_USER: zhu_jia
@@ -35,11 +38,12 @@ jobs:
         env:
           TEST_DATABASE_URL: postgresql://zhu_jia:ci-test-password@localhost:5432/zhu_jia_test
           TEST_MIGRATION_TARGET_DATABASE: postgresql://zhu_jia:ci-test-password@localhost:5432/zhu_jia_migration
+          TEST_POSTGRES_MAJOR: ${{ matrix.postgres }}
   docker:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        storage: [embedded, postgres]
+        storage: [embedded, postgres, postgres17]
     env:
       APP_ORIGIN: https://renovation.example.test
       POSTGRES_HOST: external.example.test
@@ -54,22 +58,24 @@ jobs:
           docker compose -f compose.yaml config --quiet
           docker compose -f compose.yaml -f compose.external.yaml config --quiet
           docker compose -f compose.yaml -f compose.postgres.yaml config --quiet
+          docker compose -f compose.yaml -f compose.postgres17.yaml config --quiet
           DATA_DIR=/tmp/zhu-jia docker compose -f compose.yaml -f compose.bind.yaml config --quiet
           DOMAIN=renovation.example.test docker compose -f compose.yaml -f compose.https.yaml config --quiet
       - name: Build and start
         run: |
-          if [ '${{ matrix.storage }}' = postgres ]; then
-            docker compose -f compose.yaml -f compose.postgres.yaml up -d --build --wait --wait-timeout 180
-          else
-            docker compose -f compose.yaml up -d --build --wait --wait-timeout 180
-          fi
+          files=(-f compose.yaml)
+          case '${{ matrix.storage }}' in
+            postgres) files+=(-f compose.postgres.yaml) ;;
+            postgres17) files+=(-f compose.postgres17.yaml) ;;
+          esac
+          docker compose "${files[@]}" up -d --build --wait --wait-timeout 180
       - run: node scripts/docker-smoke.mjs
         env:
           SMOKE_ALLOW_WRITE: "yes"
           SMOKE_ORIGIN: https://renovation.example.test
       - name: Show logs on failure
         if: failure()
-        run: docker compose -f compose.yaml -f compose.postgres.yaml logs --tail 100
+        run: docker compose -f compose.yaml -f compose.postgres.yaml -f compose.postgres17.yaml logs --tail 100
       - name: Remove disposable CI containers and volumes
         if: always()
-        run: docker compose -f compose.yaml -f compose.postgres.yaml down -v --remove-orphans
+        run: docker compose -f compose.yaml -f compose.postgres.yaml -f compose.postgres17.yaml down -v --remove-orphans

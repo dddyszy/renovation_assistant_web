@@ -49,6 +49,8 @@ Compose 默认固定内置目录 `/app/data/postgres`；两个 PostgreSQL 配置
 
 `.env.docker` 由 Compose 显式读取，启动命令始终带 `--env-file .env.docker`。应用镜像内没有这个文件，实际配置通过容器 environment 注入。
 
+自带 PostgreSQL 默认使用 18（compose.postgres.yaml），17 兼容使用 compose.postgres17.yaml；无需填写 POSTGRES_VERSION 之类的变量。两个配置使用不同数据卷，已有 17 数据按 [升级说明](postgresql.md) 迁移。
+
 ## 运行工具变量
 
 | 变量 | 使用工具 | 用途 |

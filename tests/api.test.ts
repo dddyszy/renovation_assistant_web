@@ -51,6 +51,16 @@ test("健康检查包含当前发布版本并确认数据库可查询", async ()
   assert.equal(response.body.data.status, "ok");
   assert.equal(response.body.data.version, APP_VERSION);
   assert.match(APP_VERSION, /^\d+\.\d+\.\d+$/);
+  if (process.env.TEST_POSTGRES_MAJOR) {
+    const [server] = await db.query(
+      "SELECT current_setting('server_version_num')::int AS server_version_num",
+    );
+    assert.equal(
+      Math.floor(Number(server!.serverVersionNum) / 10000),
+      Number(process.env.TEST_POSTGRES_MAJOR),
+      "测试数据库主版本与 CI 声明不符",
+    );
+  }
 });
 test("家庭隔离、邀请、只读权限、金额口径、版本冲突和幂等全链路", async () => {
   const owner = await account("owner"),

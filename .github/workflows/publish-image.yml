@@ -127,7 +127,7 @@ jobs:
     needs: [prepare, candidate]
     strategy:
       matrix:
-        storage: [embedded, postgres]
+        storage: [embedded, postgres, postgres17]
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -152,6 +152,7 @@ jobs:
         run: |
           files=(-f compose.yaml -f compose.image.yaml)
           if [ '${{ matrix.storage }}' = postgres ]; then files+=(-f compose.postgres.yaml); fi
+          if [ '${{ matrix.storage }}' = postgres17 ]; then files+=(-f compose.postgres17.yaml); fi
           docker compose "${files[@]}" up -d --no-build --wait --wait-timeout 180
       - run: node scripts/docker-smoke.mjs
         env:
@@ -160,10 +161,10 @@ jobs:
           SMOKE_EXPECTED_VERSION: ${{ needs.prepare.outputs.version }}
       - name: Diagnostics
         if: failure()
-        run: docker compose -f compose.yaml -f compose.image.yaml -f compose.postgres.yaml logs --tail 100
+        run: docker compose -f compose.yaml -f compose.image.yaml -f compose.postgres.yaml -f compose.postgres17.yaml logs --tail 100
       - name: Cleanup disposable CI data
         if: always()
-        run: docker compose -f compose.yaml -f compose.image.yaml -f compose.postgres.yaml down -v --remove-orphans
+        run: docker compose -f compose.yaml -f compose.image.yaml -f compose.postgres.yaml -f compose.postgres17.yaml down -v --remove-orphans
   publish:
     needs: [prepare, verify]
     runs-on: ubuntu-latest
@@ -188,6 +189,6 @@ jobs:
             echo '### Published image'
             echo "\`$IMAGE:$VERSION\`"
             echo ''
-            echo 'Platforms: linux/amd64, linux/arm64. Embedded and PostgreSQL HTTP checks passed.'
+            echo 'Platforms: linux/amd64, linux/arm64. Embedded, PostgreSQL 17 and PostgreSQL 18 HTTP checks passed.'
             echo "Source commit: $SOURCE_SHA"
           } >> "$GITHUB_STEP_SUMMARY"

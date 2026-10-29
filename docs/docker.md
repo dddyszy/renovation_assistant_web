@@ -10,7 +10,8 @@
 | --- | --- | --- | --- |
 | 内置数据库 | 应用使用 PGlite，目录持久化到 Docker 卷 | `compose.yaml` | 个人或单个家庭，最少组件 |
 | 外部 PostgreSQL | 独立服务器、云数据库或已有 PostgreSQL | 再加 `compose.external.yaml` | 数据库已有专人维护，应用与存储分离 |
-| Compose 自带 PostgreSQL | 单独数据库容器及独立数据卷 | 再加 `compose.postgres.yaml` | 想使用完整 PostgreSQL，但不单独安装数据库 |
+| Compose 自带 PostgreSQL 18（默认） | 单独数据库容器及独立数据卷 | 再加 `compose.postgres.yaml` | 推荐的完整 PostgreSQL 部署 |
+| PostgreSQL 17 兼容 | 单独数据库容器及原有 17 卷 | 改用 `compose.postgres17.yaml` | 已有 17 数据或仍需使用 17 |
 
 这三种模式共用同一套业务表和权限规则。内置模式只运行一个应用实例；外部 PostgreSQL 可以让应用容器独立重建。当前限流在应用进程内，尚不建议直接扩成多个应用副本。
 
@@ -78,7 +79,7 @@ docker compose --env-file .env.docker -f compose.yaml -f compose.external.yaml u
 
 需要 Caddy 时在上述命令中继续加 `-f compose.https.yaml`。外置配置移除应用数据卷，数据库记录由外部服务持久化。`POSTGRES_HOST=127.0.0.1` 会指向容器自身；访问宿主机数据库应使用 `host.docker.internal`，并让宿主机 PostgreSQL 接受来自容器网络的连接。
 
-## Compose 自带 PostgreSQL
+## Compose 自带 PostgreSQL 18，兼容 17
 
 无需填写 `POSTGRES_HOST`，数据库服务名固定为 `db`。设置专用密码，例如用 `openssl rand -hex 32` 生成后填入 `.env.docker`。
 
@@ -86,7 +87,9 @@ docker compose --env-file .env.docker -f compose.yaml -f compose.external.yaml u
 docker compose --env-file .env.docker -f compose.yaml -f compose.postgres.yaml up -d --build --wait
 ```
 
-应用等待数据库健康后启动，数据库不向宿主机公开 5432 端口，数据卷为 `zhu-jia-web_postgres_data`。该配置在容器私有网络中关闭数据库 TLS；浏览器到应用仍使用 HTTPS。
+默认镜像为 `postgres:18-alpine`，数据卷为 `zhu-jia-web_postgres18_data`，挂载到 `/var/lib/postgresql`，实际数据目录为 `/var/lib/postgresql/18/docker`。应用等待数据库健康后启动，数据库不向宿主机公开 5432 端口。容器私有网络中的数据库连接关闭 TLS；浏览器到应用仍使用 HTTPS。
+
+需要 17 时将命令中的数据库配置改为 `-f compose.postgres17.yaml`。该配置继续使用原来的 `zhu-jia-web_postgres_data` 卷。**原先运行 17 的部署，更新配置文件后要选择 17 兼容文件，或先按升级流程迁移；不能直接用 18 读取旧卷。**完整命令与说明见 [PostgreSQL 18 与 17](postgresql.md)。
 
 首次初始化后修改 `POSTGRES_PASSWORD` 环境变量不会自动更改已有数据库账号的密码。应先在 PostgreSQL 中修改密码，再更新应用配置，不能通过删除数据卷解决密码不匹配。
 

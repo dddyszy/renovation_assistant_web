@@ -15,6 +15,7 @@ Web 首个功能基线，与原微信小程序版本号保持为 0.9.5；这是�
 
 ### 部署与数据
 
+- PostgreSQL 部署默认使用 18，提供 17 兼容配置，使用独立数据卷并补充升级与备份说明。
 - 多阶段 Dockerfile，非 root 运行、数据库就绪检查与终止信号处理。
 - 默认内置 PGlite 数据卷、外部 PostgreSQL、自带 PostgreSQL Compose 配置。
 - 可选宿主机目录挂载、Caddy HTTPS、环境变量示例与 PostgreSQL 备份脚本。

@@ -9,6 +9,7 @@
 | 直接拉取 GitHub 镜像，或配置自动发布 | [容器镜像仓库](container-registry.md) |
 | 查环境变量、端口和邮件配置 | [配置参考](configuration.md) |
 | 按部署模式照着填写 .env.docker | [Docker 参数填写指南](docker-parameters.md) |
+| 默认使用 PostgreSQL 18，或兼容/迁移旧 17 | [PostgreSQL 部署与升级](postgresql.md) |
 | 备份、恢复、升级和排查异常 | [运维手册](operations.md) |
 | 从内置数据库切换到外部 PostgreSQL | [存储迁移](storage-migration.md) |
 | 理解前后端、权限和金额规则 | [架构说明](architecture.md) |

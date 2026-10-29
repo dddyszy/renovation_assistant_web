@@ -43,6 +43,8 @@ docker compose --env-file .env.docker -f compose.yaml start app
 sh scripts/backup-postgres.sh .env.docker
 ```
 
+该命令默认使用 PostgreSQL 18 配置。17 兼容部署使用 `sh scripts/backup-postgres.sh .env.docker 17`，确保执行命令对应实际数据库配置。数据库客户端在容器内，随 18/17 服务版本匹配；不要用宿主机的 17 pg_dump 备份 18 服务。
+
 脚本在容器内执行 pg_dump，自定义格式输出到 `backups/`，文件权限仅限当前用户；失败时移除不完整文件。文件名使用 UTC 时间戳。
 
 外部 PostgreSQL 使用服务商快照或自己的 pg_dump，备份包括用户、家庭、账目与密码哈希。文件备份与数据库备份采用不同方式，不能用只备份应用镜像代替数据库备份。

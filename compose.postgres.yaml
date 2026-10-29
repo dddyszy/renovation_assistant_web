@@ -1,4 +1,5 @@
-# PostgreSQL managed by this Compose project, separate from the application.
+# Default: PostgreSQL 18, with versioned PGDATA below /var/lib/postgresql.
+# Use a separate volume: existing PostgreSQL 17 files require a logical migration.
 services:
   app:
     environment:
@@ -14,14 +15,15 @@ services:
         condition: service_healthy
     volumes: !reset []
   db:
-    image: postgres:17-alpine
+    image: postgres:18-alpine
     restart: unless-stopped
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-zhu_jia}
       POSTGRES_USER: ${POSTGRES_USER:-zhu_jia}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
+      PGDATA: /var/lib/postgresql/18/docker
+    volumes: !override
+      - postgres18_data:/var/lib/postgresql
     healthcheck:
       test: [CMD-SHELL, 'pg_isready -U "$$POSTGRES_USER" -d "$$POSTGRES_DB"']
       interval: 10s
@@ -35,4 +37,4 @@ services:
         max-size: "10m"
         max-file: "3"
 volumes:
-  postgres_data:
+  postgres18_data:
