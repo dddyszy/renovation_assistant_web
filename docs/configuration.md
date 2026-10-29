@@ -8,10 +8,10 @@
 
 | 变量                             | 默认值                  | 用途                                                              |
 | -------------------------------- | ----------------------- | ----------------------------------------------------------------- |
-| NODE_ENV                         | 未设置                  | 生产使用 `production`，启用 HTTPS 来源检查与 Secure Cookie        |
+| NODE_ENV                         | 未设置                  | 生产使用 `production`，启用来源检查、生产错误处理与响应头         |
 | HOST                             | `127.0.0.1`             | API 监听地址，Docker 设置为 `0.0.0.0`                             |
 | PORT                             | `3001`                  | API 及生产静态服务端口                                            |
-| APP_ORIGIN                       | `http://localhost:5173` | 浏览器来源；生产必须显式填写 HTTPS 来源                           |
+| APP_ORIGIN                       | `http://localhost:5173` | 浏览器真实入口；生产必须显式设置，支持 HTTP 与代理入口            |
 | DATABASE_URL                     | 见下节                  | 连接 URL 或 PGlite 数据目录                                       |
 | PGHOST / PGPORT                  | 无 / 5432               | 不填 DATABASE_URL 时选择外部 PostgreSQL 的地址和端口              |
 | PGDATABASE / PGUSER / PGPASSWORD | pg 的环境默认           | 独立传递数据库、账号和密码                                        |
@@ -19,6 +19,8 @@
 | SMTP_HOST / SMTP_PORT            | 无 / 587                | 邮件服务器；465 使用直接 TLS                                      |
 | SMTP_USER / SMTP_PASSWORD        | 无                      | 邮件认证，按服务商要求填写                                        |
 | SMTP_FROM                        | 无                      | 发件人；配置 SMTP_HOST 后必填                                     |
+
+入口只接受 HTTP(S) 来源，不允许账号、子路径、查询参数或片段。根路径尾斜线和默认端口会被规范化。Cookie 的 Secure 属性按入口协议设置，不根据转发头改变；HttpOnly 和 SameSite=Lax 始终保留。
 
 数据库连接池每个应用进程最多 10 个连接，建立连接超时 5 秒，空闲连接 30 秒回收。
 
@@ -34,18 +36,17 @@ Compose 默认固定内置目录 `/app/data/postgres`；两个 PostgreSQL 配置
 
 ## Docker 编排变量
 
-| 变量                          | 默认值                                     | 用途                                            |
-| ----------------------------- | ------------------------------------------ | ----------------------------------------------- |
-| APP_ORIGIN                    | 必填，无 Compose 回退值                    | 用户浏览器的真实 HTTPS 来源，不带路径和结尾斜线 |
-| APP_IMAGE                     | `ghcr.io/dddyszy/renovation_assistant_web` | compose.image.yaml 使用的镜像名，不带版本标签   |
-| APP_IMAGE_TAG                 | `0.9.5`                                    | 本地构建镜像标签和 OCI 版本标记                 |
-| APP_PORT                      | `8080`                                     | 宿主机回环端口，容器端口仍为 3001               |
-| DOMAIN                        | 无                                         | Caddy 使用的域名，不含协议和路径                |
-| DATA_DIR                      | 无                                         | 可选目录挂载的绝对路径                          |
-| POSTGRES_HOST / POSTGRES_PORT | 无 / 5432                                  | 外置数据库服务器                                |
-| POSTGRES_DB / POSTGRES_USER   | `zhu_jia`                                  | 外置和自带 PostgreSQL 的数据库及账号            |
-| POSTGRES_PASSWORD             | 无，相关模式必填                           | 不设通用数据库密码                              |
-| POSTGRES_SSLMODE              | 示例为 `verify-full`                       | 外置配置传给 PGSSLMODE；自带配置固定为 disable  |
+| 变量                          | 默认值                                     | 用途                                           |
+| ----------------------------- | ------------------------------------------ | ---------------------------------------------- |
+| APP_ORIGIN                    | 必填，无 Compose 回退值                    | 用户浏览器的真实入口来源，不带路径和结尾斜线   |
+| APP_IMAGE                     | `ghcr.io/dddyszy/renovation_assistant_web` | compose.image.yaml 使用的镜像名，不带版本标签  |
+| APP_IMAGE_TAG                 | `0.9.5`                                    | 本地构建镜像标签和 OCI 版本标记                |
+| APP_PORT                      | `8080`                                     | 宿主机回环端口，容器端口仍为 3001              |
+| DATA_DIR                      | 无                                         | 可选目录挂载的绝对路径                         |
+| POSTGRES_HOST / POSTGRES_PORT | 无 / 5432                                  | 外置数据库服务器                               |
+| POSTGRES_DB / POSTGRES_USER   | `zhu_jia`                                  | 外置和自带 PostgreSQL 的数据库及账号           |
+| POSTGRES_PASSWORD             | 无，相关模式必填                           | 不设通用数据库密码                             |
+| POSTGRES_SSLMODE              | 示例为 `verify-full`                       | 外置配置传给 PGSSLMODE；自带配置固定为 disable |
 
 `.env.docker` 由 Compose 显式读取，启动命令始终带 `--env-file .env.docker`。应用镜像内没有这个文件，实际配置通过容器 environment 注入。
 

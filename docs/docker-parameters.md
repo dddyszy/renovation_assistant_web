@@ -1,6 +1,6 @@
 # Docker 部署参数填写指南
 
-适用版本：0.9.5。先选择存储和 HTTPS 方式，再按对应部分填写 `.env.docker`。不需要把所有参数都填满。
+适用版本：0.9.5。先选择存储方式，再按对应部分填写 `.env.docker`。不需要把所有参数都填满。
 
 ```bash
 cp .env.docker.example .env.docker
@@ -10,13 +10,12 @@ cp .env.docker.example .env.docker
 
 ## 先判断哪些参数必须填写
 
-| 部署方式                     | 必须按实际情况填写                                                                                                   | 通常保留默认                                                                  | 可以留空或忽略                                                        |
-| ---------------------------- | -------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------- | --------------------------------------------------------------------- |
-| 内置数据库 + 已有 HTTPS 代理 | APP_ORIGIN                                                                                                           | APP_IMAGE、APP_IMAGE_TAG、APP_PORT                                            | DOMAIN、DATA_DIR、全部 POSTGRES__、全部 SMTP__                        |
-| 内置数据库 + 随附 Caddy      | APP_ORIGIN、DOMAIN                                                                                                   | APP_IMAGE、APP_IMAGE_TAG、APP_PORT                                            | DATA_DIR、全部 POSTGRES__、全部 SMTP__                                |
-| 已有外部 PostgreSQL          | APP_ORIGIN、POSTGRES_HOST、POSTGRES_DB、POSTGRES_USER、POSTGRES_PASSWORD、POSTGRES_SSLMODE；使用 Caddy 时还填 DOMAIN | APP_IMAGE、APP_IMAGE_TAG、APP_PORT；POSTGRES_PORT 取数据库实际端口，通常 5432 | DATA_DIR、全部 SMTP_*                                                 |
-| Compose 自带 PostgreSQL      | APP_ORIGIN、POSTGRES_PASSWORD；使用 Caddy 时还填 DOMAIN                                                              | APP_IMAGE、APP_IMAGE_TAG、APP_PORT、POSTGRES_DB、POSTGRES_USER                | DATA_DIR、POSTGRES_HOST、POSTGRES_PORT、POSTGRES_SSLMODE、全部 SMTP_* |
-| 内置数据库改用宿主机目录     | 在所选内置方式基础上，再填 DATA_DIR                                                                                  | 其他同内置模式                                                                | 全部 POSTGRES_*                                                       |
+| 部署方式                 | 必须按实际情况填写                                                                         | 通常保留默认                                                                  | 可以留空或忽略                                                        |
+| ------------------------ | ------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------- | --------------------------------------------------------------------- |
+| 内置数据库 + 服务器反代  | APP_ORIGIN                                                                                 | APP_IMAGE、APP_IMAGE_TAG、APP_PORT                                            | DATA_DIR、全部 POSTGRES__、全部 SMTP__                                |
+| 已有外部 PostgreSQL      | APP_ORIGIN、POSTGRES_HOST、POSTGRES_DB、POSTGRES_USER、POSTGRES_PASSWORD、POSTGRES_SSLMODE | APP_IMAGE、APP_IMAGE_TAG、APP_PORT；POSTGRES_PORT 取数据库实际端口，通常 5432 | DATA_DIR、全部 SMTP_*                                                 |
+| Compose 自带 PostgreSQL  | APP_ORIGIN、POSTGRES_PASSWORD                                                              | APP_IMAGE、APP_IMAGE_TAG、APP_PORT、POSTGRES_DB、POSTGRES_USER                | DATA_DIR、POSTGRES_HOST、POSTGRES_PORT、POSTGRES_SSLMODE、全部 SMTP_* |
+| 内置数据库改用宿主机目录 | 在所选内置方式基础上，再填 DATA_DIR                                                        | 其他同内置模式                                                                | 全部 POSTGRES_*                                                       |
 
 只有启用邮件找回密码时才填写 SMTP 参数。注册不验证邮箱，未配置 SMTP 不影响注册和登录。
 
@@ -24,20 +23,19 @@ cp .env.docker.example .env.docker
 
 ## 入口和镜像参数
 
-| 参数          | 是否必填                       | 填什么                                                                                  | 示例或默认                                 |
-| ------------- | ------------------------------ | --------------------------------------------------------------------------------------- | ------------------------------------------ |
-| APP_ORIGIN    | 必填                           | 用户浏览器实际访问的 HTTPS 来源，只含协议、域名和可选端口；不含路径、查询参数、结尾斜线 | `https://home.example.com`                 |
-| APP_IMAGE     | 使用 GHCR 时保留默认即可       | 镜像名称，不包含 `:版本号`；仅 compose.image.yaml 使用                                  | `ghcr.io/dddyszy/renovation_assistant_web` |
-| APP_IMAGE_TAG | 可不改                         | 已发布的镜像版本，不带 v；当前没有 latest 标签                                          | `0.9.5`                                    |
-| APP_PORT      | 可不改                         | 宿主机回环端口，需未被占用，范围 1–65535                                                | `8080`                                     |
-| DOMAIN        | 使用 compose.https.yaml 时必填 | Caddy 申请证书的域名，不带 https://、端口、路径或结尾斜线                               | `home.example.com`                         |
-| DATA_DIR      | 使用 compose.bind.yaml 时必填  | 宿主机专用数据目录的绝对路径                                                            | `/srv/zhu-jia/data`                        |
+| 参数          | 是否必填                      | 填什么                                                                           | 示例或默认                                 |
+| ------------- | ----------------------------- | -------------------------------------------------------------------------------- | ------------------------------------------ |
+| APP_ORIGIN    | 必填                          | 用户浏览器实际访问的来源，只含协议、域名和可选端口；不含路径、查询参数、结尾斜线 | `http://home.example.com`                  |
+| APP_IMAGE     | 使用 GHCR 时保留默认即可      | 镜像名称，不包含 `:版本号`；仅 compose.image.yaml 使用                           | `ghcr.io/dddyszy/renovation_assistant_web` |
+| APP_IMAGE_TAG | 可不改                        | 已发布的镜像版本，不带 v；当前没有 latest 标签                                   | `0.9.5`                                    |
+| APP_PORT      | 可不改                        | 宿主机回环端口，需未被占用，范围 1–65535                                         | `8080`                                     |
+| DATA_DIR      | 使用 compose.bind.yaml 时必填 | 宿主机专用数据目录的绝对路径                                                     | `/srv/zhu-jia/data`                        |
 
-`APP_PORT=8080` 表示应用映射到 `127.0.0.1:8080`，不表示用户应访问 `http://服务器IP:8080`。用户访问的是 APP_ORIGIN 指定的 HTTPS 地址，代理再转发给应用。
+`APP_PORT=8080` 表示应用映射到 `127.0.0.1:8080`，不表示用户应访问 `http://服务器IP:8080`。用户访问的是 APP_ORIGIN 指定的入口地址，代理再转发给应用。
 
-使用随附 Caddy 时，APP_ORIGIN 与 DOMAIN 应对应同一个域名，例如 `https://home.example.com` 与 `home.example.com`；域名需解析到服务器，并允许访问 80/443 端口。Caddy 直接连接容器内 3001 端口，修改 APP_PORT 不会改变 Caddy 的公网 80/443 端口。
+服务器现有代理若运行在宿主机，转发到 `127.0.0.1:8080`；若也是容器，将代理和应用加入同一个 Docker 网络，转发到 `app:3001`。不要把代理容器的 localhost 当成宿主机。完整示例见 [服务器反代](docker.md#启动应用与服务器反代)。
 
-使用已有代理时，DOMAIN 不参与配置。该代理若运行在宿主机，转发到 `127.0.0.1:8080`；若也是容器，应按其网络配置连接应用容器，不能把代理容器的 localhost 当成宿主机。
+APP_ORIGIN 必须匹配浏览器地址栏的协议、主机和端口，不能填写代理的上游地址。根路径末尾的 `/` 会被规范化，子路径、查询参数和账号信息会被拒绝。
 
 ## 数据库参数
 
@@ -57,7 +55,7 @@ POSTGRES_SSLMODE 主要选择：
 - `verify-full`：外部数据库提供可信 TLS 证书，并验证证书与主机名；示例文件采用此值。
 - `disable`：数据库明确不提供 TLS，且应用到数据库是受控内网连接。
 
-外置配置在不设置该变量时回退为 `prefer`，实际部署建议按数据库要求显式填写，而不是依赖回退行为。这里的 TLS 是应用到数据库，与用户浏览器到网站的 HTTPS 分开配置。
+外置配置在不设置该变量时回退为 `prefer`，实际部署建议按数据库要求显式填写，而不是依赖回退行为。这里的 TLS 只控制应用到数据库的连接。
 
 可以用 `openssl rand -hex 32` 为新建的 Compose PostgreSQL 生成密码。已有数据库应使用其已有密码；修改环境变量不会重置已经初始化的数据库密码。
 
@@ -75,14 +73,16 @@ Compose 将密码单独传给 PGPASSWORD，不必把特殊字符编码成 URL。
 
 不需要邮件功能时保持 SMTP_HOST、SMTP_USER、SMTP_PASSWORD、SMTP_FROM 为空，SMTP_PORT 保留 587 即可。生产环境会明确提示邮件找回暂不可用，不会影响普通登录。
 
-## 示例一：内置存储，已有 HTTPS 代理
+已发布的旧 0.9.5 镜像尚未包含本次 HTTP 入口改动，下面的拉取命令用于对应的新镜像发布后。需要立即使用 HTTP 入口时，移除 `-f compose.image.yaml`，并把 `--no-build` 换成 `--build`，从当前源码构建。
+
+## 示例一：内置存储，服务器已有反代
 
 `.env.docker` 最少保留以下内容，替换 APP_ORIGIN：
 
 ```dotenv
 APP_IMAGE=ghcr.io/dddyszy/renovation_assistant_web
 APP_IMAGE_TAG=0.9.5
-APP_ORIGIN=https://home.example.com
+APP_ORIGIN=http://home.example.com
 APP_PORT=8080
 ```
 
@@ -92,21 +92,7 @@ docker compose --env-file .env.docker -f compose.yaml -f compose.image.yaml up -
 
 已有代理转发到 `127.0.0.1:8080`，内置数据默认保存在 Docker 命名卷，无需填写数据库密码或 DATA_DIR。
 
-## 示例二：内置存储，使用随附 Caddy
-
-在示例一配置中增加：
-
-```dotenv
-DOMAIN=home.example.com
-```
-
-```bash
-docker compose --env-file .env.docker -f compose.yaml -f compose.image.yaml -f compose.https.yaml up -d --no-build --wait
-```
-
-还需复制 `deploy/Caddyfile` 到服务器相同的相对位置。确认域名解析、端口和镜像仓库登录后运行。
-
-## 示例三：使用已有外部 PostgreSQL
+## 示例二：使用已有外部 PostgreSQL
 
 在示例一配置中增加并填写真实值：
 
@@ -123,9 +109,9 @@ POSTGRES_SSLMODE=verify-full
 docker compose --env-file .env.docker -f compose.yaml -f compose.image.yaml -f compose.external.yaml up -d --no-build --wait
 ```
 
-示例的数据库密码和地址是占位值，需要替换。无 TLS 的内网数据库按实际要求改为 disable；使用 Caddy 时继续增加 DOMAIN 和 `-f compose.https.yaml`。
+示例的数据库密码和地址是占位值，需要替换。无 TLS 的内网数据库按实际要求改为 disable。
 
-## 示例四：Compose 创建 PostgreSQL 18，兼容 17
+## 示例三：Compose 创建 PostgreSQL 18，兼容 17
 
 在示例一配置中增加：
 
@@ -167,4 +153,4 @@ GitHub 用户名和 GHCR Token 不属于应用环境参数，不填进 `.env.doc
 
 避免将完整的 `docker compose config` 输出发到公开位置，其中可能包含展开后的密码；日常校验使用 `--quiet`。
 
-启动后执行 `curl --fail http://127.0.0.1:8080/api/v1/health`（若改 APP_PORT，同步改这里的端口），再用 APP_ORIGIN 的 HTTPS 地址打开网页。
+启动后执行 `curl --fail http://127.0.0.1:8080/api/v1/health`（若改 APP_PORT，同步改这里的端口），再用 APP_ORIGIN 指定的地址打开网页。

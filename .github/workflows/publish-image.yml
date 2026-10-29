@@ -133,7 +133,7 @@ jobs:
       contents: read
       packages: read
     env:
-      APP_ORIGIN: https://renovation.example.test
+      APP_ORIGIN: http://renovation.example.test
       APP_IMAGE: ${{ needs.prepare.outputs.image }}
       APP_IMAGE_TAG: sha-${{ needs.prepare.outputs.source_sha }}
       POSTGRES_PASSWORD: "ci:test@password/with%characters#"
@@ -157,7 +157,7 @@ jobs:
       - run: node scripts/docker-smoke.mjs
         env:
           SMOKE_ALLOW_WRITE: "yes"
-          SMOKE_ORIGIN: https://renovation.example.test
+          SMOKE_ORIGIN: http://renovation.example.test
           SMOKE_EXPECTED_VERSION: ${{ needs.prepare.outputs.version }}
       - name: Diagnostics
         if: failure()

@@ -60,7 +60,7 @@ export function registerAuthRoutes(
       });
       reply.setCookie("session", token, {
         httpOnly: true,
-        secure: production,
+        secure: origin.startsWith("https://"),
         sameSite: "lax",
         path: "/",
         maxAge: 14 * 24 * 3600,

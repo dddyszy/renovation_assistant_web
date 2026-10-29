@@ -597,47 +597,82 @@ test("注册无需验证码，邮箱规范化去重并保留密码强度校验",
     404,
   );
 });
-test("生产环境无需 SMTP 即可注册登录，未配置邮件时找回密码明确报错", async () => {
+test("生产 HTTP 入口支持登录与会话，代理安全入口保留 Cookie 属性，写请求仍校验来源", async (t) => {
   const keys = ["NODE_ENV", "APP_ORIGIN", "SMTP_HOST", "SMTP_FROM"] as const;
   const saved = Object.fromEntries(keys.map((k) => [k, process.env[k]]));
   let productionApp: Awaited<ReturnType<typeof createApp>> | undefined;
   try {
     process.env.NODE_ENV = "production";
-    process.env.APP_ORIGIN = "https://zhu-jia.example.test";
-    delete process.env.SMTP_HOST;
-    delete process.env.SMTP_FROM;
-    productionApp = await createApp(db, { testing: true });
-    const headers = {
-      origin: "https://zhu-jia.example.test",
-      "x-requested-with": "zhu-jia-web",
-    };
-    const credentials = {
-      email: "production@example.test",
-      password: "ProductionTest!123",
-    };
-    const registered = await productionApp.inject({
-      method: "POST",
-      url: "/api/v1/auth/register",
-      headers,
-      payload: { ...credentials, nickname: "生产注册验收" },
-    });
-    assert.equal(registered.statusCode, 200);
-    const loggedIn = await productionApp.inject({
-      method: "POST",
-      url: "/api/v1/auth/login",
-      headers,
-      payload: credentials,
-    });
-    assert.equal(loggedIn.statusCode, 200);
-    assert(loggedIn.cookies[0]?.secure);
-    const reset = await productionApp.inject({
-      method: "POST",
-      url: "/api/v1/auth/reset/request",
-      headers,
-      payload: { email: credentials.email },
-    });
-    assert.equal(reset.statusCode, 503);
-    assert.equal(reset.json().error.code, "MAIL_NOT_CONFIGURED");
+    for (const protocol of ["http", "https"]) {
+      await t.test(protocol, async () => {
+        process.env.APP_ORIGIN = `${protocol}://zhu-jia.example.test`;
+        delete process.env.SMTP_HOST;
+        delete process.env.SMTP_FROM;
+        productionApp = await createApp(db, { testing: true });
+        const headers = {
+          origin: `${protocol}://zhu-jia.example.test`,
+          "x-requested-with": "zhu-jia-web",
+        };
+        const credentials = {
+          email: `production-${protocol}@example.test`,
+          password: "ProductionTest!123",
+        };
+        const registered = await productionApp.inject({
+          method: "POST",
+          url: "/api/v1/auth/register",
+          headers,
+          payload: { ...credentials, nickname: "生产注册验收" },
+        });
+        assert.equal(registered.statusCode, 200);
+        const loggedIn = await productionApp.inject({
+          method: "POST",
+          url: "/api/v1/auth/login",
+          headers,
+          payload: credentials,
+        });
+        assert.equal(loggedIn.statusCode, 200);
+        assert.equal(!!loggedIn.cookies[0]?.secure, protocol === "https");
+        assert(loggedIn.cookies[0]?.httpOnly);
+        assert.equal(loggedIn.cookies[0]?.sameSite, "Lax");
+        const cookie = loggedIn.cookies.map((c) => `${c.name}=${c.value}`).join(";");
+        const me = await productionApp.inject({
+          method: "GET",
+          url: "/api/v1/me",
+          headers: { cookie },
+        });
+        assert.equal(me.statusCode, 200);
+        assert.equal(me.json().data.email, credentials.email);
+        const family = await productionApp.inject({
+          method: "POST",
+          url: "/api/v1/families",
+          headers: { ...headers, cookie },
+          payload: { name: "HTTP 反代验收" },
+        });
+        assert.equal(family.statusCode, 200);
+        const rejected = await productionApp.inject({
+          method: "POST",
+          url: "/api/v1/families",
+          headers: {
+            ...headers,
+            cookie,
+            origin: "http://other.example.test",
+            "x-forwarded-proto": "https",
+          },
+          payload: { name: "来源不可伪造" },
+        });
+        assert.equal(rejected.statusCode, 403);
+        const reset = await productionApp.inject({
+          method: "POST",
+          url: "/api/v1/auth/reset/request",
+          headers,
+          payload: { email: credentials.email },
+        });
+        assert.equal(reset.statusCode, 503);
+        assert.equal(reset.json().error.code, "MAIL_NOT_CONFIGURED");
+        await productionApp.close();
+        productionApp = undefined;
+      });
+    }
   } finally {
     await productionApp?.close();
     for (const k of keys) {

@@ -9,7 +9,7 @@ if (
   throw new Error(
     "该脚本会创建临时验收数据，仅在本机测试端口设置 SMOKE_ALLOW_WRITE=yes 后运行",
   );
-const origin = process.env.SMOKE_ORIGIN || "https://renovation.example.test";
+const origin = process.env.SMOKE_ORIGIN || "http://renovation.example.test";
 const metadata = JSON.parse(
   await readFile(new URL("../package.json", import.meta.url), "utf8"),
 );

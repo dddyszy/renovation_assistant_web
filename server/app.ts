@@ -3,6 +3,7 @@ import rateLimit from "@fastify/rate-limit";
 import Fastify from "fastify";
 import { createRequestContext } from "./context.ts";
 import type { Db } from "./db.ts";
+import { readAppOrigin } from "./lib/origin.ts";
 import { registerSecurity } from "./plugins/security.ts";
 import { registerAuthRoutes } from "./routes/auth.ts";
 import { registerFamiliesRoutes } from "./routes/families.ts";
@@ -14,9 +15,7 @@ import { registerStatisticsRoutes } from "./routes/statistics.ts";
 
 export async function createApp(db: Db, options: { testing?: boolean } = {}) {
   const production = process.env.NODE_ENV === "production";
-  const origin = process.env.APP_ORIGIN || "http://localhost:5173";
-  if (production && !process.env.APP_ORIGIN?.startsWith("https://"))
-    throw new Error("生产环境需要 HTTPS APP_ORIGIN");
+  const origin = readAppOrigin(process.env.APP_ORIGIN, production);
   if (process.env.SMTP_HOST && !process.env.SMTP_FROM)
     throw new Error("配置 SMTP_HOST 后需要同时设置 SMTP_FROM");
   const app = Fastify({

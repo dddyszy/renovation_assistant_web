@@ -6,15 +6,15 @@
 
 ## 推荐：直接使用 PostgreSQL 18
 
-复制最新部署配置，填写 `.env.docker` 中的 APP_ORIGIN、数据库密码。需要 Caddy 时再填 DOMAIN。镜像私有，先完成 GHCR 登录。
+复制最新部署配置，填写 `.env.docker` 中的 APP_ORIGIN、数据库密码。本次 HTTP 入口改动使用当前源码构建；旧 0.9.5 镜像尚未包含改动。
 
 ```bash
 docker compose --env-file .env.docker \
-  -f compose.yaml -f compose.image.yaml -f compose.postgres.yaml \
-  up -d --no-build --wait
+  -f compose.yaml -f compose.postgres.yaml \
+  up -d --build --wait
 ```
 
-应用使用 `ghcr.io/dddyszy/renovation_assistant_web:0.9.5`，数据库使用 `postgres:18-alpine`。无需重建应用镜像。完整填写规则见 [Docker 参数指南](docker-parameters.md)。
+应用从当前源码构建，数据库使用 `postgres:18-alpine`。包含本次改动的新应用镜像发布后，也可以加 `-f compose.image.yaml` 并改用 `--no-build`。完整填写规则见 [Docker 参数指南](docker-parameters.md)。
 
 ## 兼容 PostgreSQL 17
 
@@ -22,8 +22,8 @@ docker compose --env-file .env.docker \
 
 ```bash
 docker compose --env-file .env.docker \
-  -f compose.yaml -f compose.image.yaml -f compose.postgres17.yaml \
-  up -d --no-build --wait
+  -f compose.yaml -f compose.postgres17.yaml \
+  up -d --build --wait
 ```
 
 数据库使用 `postgres:17-alpine`，兼容配置继续使用旧的 `zhu-jia-web_postgres_data` 卷。更新项目部署文件后，原 17 部署应选择这个配置，不能继续假定 compose.postgres.yaml 仍代表 17。
@@ -36,8 +36,8 @@ docker compose --env-file .env.docker \
 
 ```bash
 docker compose --env-file .env.docker \
-  -f compose.yaml -f compose.image.yaml -f compose.external.yaml \
-  up -d --no-build --wait
+  -f compose.yaml -f compose.external.yaml \
+  up -d --build --wait
 ```
 
 填写实际的 POSTGRES_HOST、POSTGRES_PORT、POSTGRES_DB、POSTGRES_USER、POSTGRES_PASSWORD 和 POSTGRES_SSLMODE。不需要额外设置数据库版本变量，版本由外部服务器决定；应用不会替外部服务器升级数据库。
@@ -67,7 +67,7 @@ PostgreSQL 官方镜像从 18 起使用按主版本分目录的数据布局，�
 
 ```bash
 docker compose --env-file .env.docker \
-  -f compose.yaml -f compose.image.yaml -f compose.postgres.yaml \
+  -f compose.yaml -f compose.postgres.yaml \
   up -d --wait db
 ```
 

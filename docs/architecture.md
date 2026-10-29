@@ -4,7 +4,7 @@
 
 ```mermaid
 flowchart LR
-    A[电脑和手机浏览器] --> B[HTTPS 反向代理]
+    A[电脑和手机浏览器] --> B[服务器现有反向代理]
     B --> C[Fastify 静态资源与 API]
     C --> D[会话及家庭成员权限]
     D --> E[项目 阶段 材料 支出 备忘]
@@ -32,7 +32,7 @@ HTTP 请求与错误处理在 `src/services/api.ts`，项目查询在 `src/compo
 
 ## 身份和权限
 
-注册使用邮箱、密码与昵称，不验证邮箱。密码使用 Argon2id；服务端只保存随机会话令牌的哈希。Cookie 为 HttpOnly、SameSite=Lax，生产再启用 Secure；写请求检查 Origin 与应用请求头，认证接口限流。
+注册使用邮箱、密码与昵称，不验证邮箱。密码使用 Argon2id；服务端只保存随机会话令牌的哈希。Cookie 为 HttpOnly、SameSite=Lax，Secure 属性按浏览器入口协议设置；写请求检查 Origin 与应用请求头，认证接口限流。
 
 每次访问先验证会话和家庭成员，再确认项目及关联资源属于相同家庭、相同项目。非成员拿到资源 ID 也无法查询。所有者、管理员、成员、只读成员的业务边界见用户指南。
 
