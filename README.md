@@ -39,6 +39,8 @@ npm run demo
 
 ## Docker 部署与存储
 
+可从 GHCR 直接拉取预构建镜像，无需服务器构建：`ghcr.io/dddyszy/renovation_assistant_web:0.9.5`。私有镜像需先登录；[发布与使用说明](docs/container-registry.md)。
+
 支持内置数据库和外置 PostgreSQL，也提供同 Compose 启动 PostgreSQL 的配置。Docker Compose 需要 2.24.4 及以上。
 
 ```bash
@@ -60,6 +62,7 @@ docker compose --env-file .env.docker -f compose.yaml -f compose.postgres.yaml u
 内置模式可以叠加 `compose.bind.yaml` 将数据放到宿主机指定目录；容器重建不删除持久化数据。切换数据库不会自动搬迁记录，使用带预检和核对的存储迁移工具。
 
 - [Docker 部署详解](docs/docker.md)
+- [直接拉取 GitHub 容器镜像](docs/container-registry.md)
 - [配置参考](docs/configuration.md)
 - [存储迁移](docs/storage-migration.md)
 - [备份、升级与故障处理](docs/operations.md)

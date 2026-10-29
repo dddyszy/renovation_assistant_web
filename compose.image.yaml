@@ -1,0 +1,6 @@
+# Pull a prebuilt GHCR image. Combine with compose.yaml and an optional storage/HTTPS overlay.
+services:
+  app:
+    image: ${APP_IMAGE:-ghcr.io/dddyszy/renovation_assistant_web}:${APP_IMAGE_TAG:-0.9.5}
+    build: !reset null
+    pull_policy: always

@@ -2,6 +2,8 @@
 
 版本：0.9.5。应用镜像默认名称为 `zhu-jia-web:0.9.5`。使用 Docker Engine 或 Docker Desktop，Docker Compose **2.24.4 及以上**；配置中使用 `!reset`、`!override` 合并存储模式。
 
+需要直接使用 GHCR 预构建镜像时，再加 `-f compose.image.yaml` 并使用 `--no-build`；私有镜像登录及完整命令见 [镜像仓库说明](container-registry.md)。以下默认命令用于从源码构建，两种部署方式共用存储配置。
+
 ## 选择存储方式
 
 | 模式 | 数据存在哪里 | 配置文件 | 适用情况 |

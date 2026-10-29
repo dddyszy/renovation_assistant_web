@@ -18,7 +18,7 @@ npm test
 
 使用专用 PostgreSQL 测试库再运行一次集成测试，环境变量 `TEST_DATABASE_URL` 指向该测试库。不可指向生产数据库。
 
-Docker 环境运行内置、外置配置验证，并构建对应架构镜像。随附 CI 可在托管仓库中运行这些步骤；当前本地目录尚不因此自动拥有远程仓库或已运行的工作流。
+Docker 环境运行内置、外置配置验证，并构建对应架构镜像。源仓库已上传到 GitHub，普通 CI 负责校验；`publish-image.yml` 负责将通过验证的 AMD64/ARM64 镜像发布到 GHCR，见 [容器镜像仓库](container-registry.md)。
 
 新增 schema 变更必须包括旧数据升级和回滚方案。0.9.5 仍使用初始 schema，后续版本优先引入正式迁移框架。
 

@@ -79,4 +79,4 @@ API 服务会托管 `dist/`，并为前端深链接返回 index.html，未知 AP
 - 浏览器：在本地内置浏览器使用虚构演示账号验证登录、首页、材料关联付款、软删除/恢复/即时撤销、备忘编辑、家庭与项目切换；检查 360px/390px/1440px 宽度。截图存放于本机 artifacts，未纳入源码。
 - 小程序参考：使用现有微信开发者工具读取并截图首页，参考其配色、预算卡片、阶段与底部导航，没有调用原项目写入测试。
 
-本机没有 Docker 引擎，尚未实际构建和启动容器；已提供 CI 容器构建与 HTTP 验收步骤，但本地没有运行远程 CI。真实邮件、正式域名证书、目标服务器和 iOS/Android 真机仍未验证。
+本机没有 Docker 引擎；[GitHub Actions 验证](https://github.com/dddyszy/renovation_assistant_web/actions/runs/40904512273)已完成 Linux AMD64 上的容器构建、内置数据库与 PostgreSQL HTTP 验收。GHCR 的双架构构建与拉取验证由独立发布流程处理，见容器镜像仓库文档。真实邮件、正式域名证书、目标服务器和 iOS/Android 真机仍未验证。

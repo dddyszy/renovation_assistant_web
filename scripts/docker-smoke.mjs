@@ -35,7 +35,10 @@ async function api(path, method = "GET", body) {
 }
 try {
   const health = await api("/health");
-  assert.equal(health.version, metadata.version);
+  assert.equal(
+    health.version,
+    process.env.SMOKE_EXPECTED_VERSION || metadata.version,
+  );
   const email = `docker-${randomUUID()}@example.test`;
   await api("/auth/register", "POST", {
     email,
