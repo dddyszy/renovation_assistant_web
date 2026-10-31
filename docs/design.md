@@ -10,18 +10,18 @@
 
 已检查小程序页面、业务工具函数、七个云函数目录和数据库说明。当前有 13 个页面，使用原生小程序 TypeScript、WXML、WXSS，以及微信云开发数据库与存储。
 
-| 现有能力 | Web 处理方式 |
-| --- | --- |
-| 微信身份登录、头像昵称 | 改成独立账号体系，头像改用标准文件上传 |
-| 多项目、半包/全包、四种流程模板 | 保留；项目归属家庭 |
-| 阶段预算、排序、并行施工、聚焦阶段 | 保留；个人浏览偏好与共享进度分开 |
-| 材料计划、型号、采购状态 | 保留；增加记录人、修改人 |
-| 实际支出、材料关联、多次付款 | 保留；家庭成员共同记账 |
-| 账本筛选、草稿、复制上一笔、连续记录 | 保留；草稿按账号、家庭、项目隔离 |
-| 项目/阶段/材料预算统计 | 保留计算规则，修正容易混淆的金额文案 |
-| 备忘专栏、重点、确认状态、多行导入 | 完整保留 |
-| 软删除、撤销、写入幂等 | 保留，补充协作冲突控制 |
-| 微信隐私入口、原生反馈 | 替换成网页隐私说明、反馈入口 |
+| 现有能力                             | Web 处理方式                           |
+| ------------------------------------ | -------------------------------------- |
+| 微信身份登录、头像昵称               | 改成独立账号体系，头像改用标准文件上传 |
+| 多项目、半包/全包、四种流程模板      | 保留；项目归属家庭                     |
+| 阶段预算、排序、并行施工、聚焦阶段   | 保留；个人浏览偏好与共享进度分开       |
+| 材料计划、型号、采购状态             | 保留；增加记录人、修改人               |
+| 实际支出、材料关联、多次付款         | 保留；家庭成员共同记账                 |
+| 账本筛选、草稿、复制上一笔、连续记录 | 保留；草稿按账号、家庭、项目隔离       |
+| 项目/阶段/材料预算统计               | 保留计算规则，修正容易混淆的金额文案   |
+| 备忘专栏、重点、确认状态、多行导入   | 完整保留                               |
+| 软删除、撤销、写入幂等               | 保留，补充协作冲突控制                 |
+| 微信隐私入口、原生反馈               | 替换成网页隐私说明、反馈入口           |
 
 可复用的业务逻辑集中在 `miniprogram/utils/budget.js`、`material.js`、`notes.js` 与 `constants/project-templates.js`，以及相应单元测试。WXML 页面、微信路由和 `wx.*` 调用需要重写。云函数中的字段校验与业务规则可迁移，但身份获取和数据库访问不能直接照搬。
 
@@ -45,7 +45,7 @@
 
 密码使用 Argon2id 哈希；注册、登录和密码重置均做限流，密码最少 10 位。一次性重置链接短时有效，使用后失效。
 
-登录使用服务端可撤销会话和 HttpOnly、Secure、SameSite Cookie。修改密码后撤销其他会话，退出登录撤销当前会话。写接口校验来源并防护 CSRF；前端路由隐藏不能替代服务端权限检查。
+登录使用服务端可撤销会话和 HttpOnly、SameSite Cookie，Secure 随浏览器入口协议设置。修改密码后撤销其他会话，退出登录撤销当前会话。写接口校验来源并防护 CSRF；前端路由隐藏不能替代服务端权限检查。
 
 ### 3.2 首次使用流程
 
@@ -69,17 +69,17 @@ flowchart TD
 
 ### 3.3 家庭角色
 
-| 操作 | 家庭所有者 | 管理员 | 成员 | 只读成员 |
-| --- | --- | --- | --- | --- |
-| 查看项目、账本、材料、备忘 | 是 | 是 | 是 | 是 |
-| 新增、编辑、软删除/恢复共享材料、支出、备忘 | 是 | 是 | 是 | 否 |
-| 更新施工阶段状态 | 是 | 是 | 是 | 否 |
-| 新建项目、预算设置、阶段结构调整 | 是 | 是 | 否 | 否 |
-| 归档/恢复项目 | 是 | 是 | 否 | 否 |
-| 查看家庭操作记录 | 是 | 是 | 是 | 是 |
-| 邀请成员/只读成员，移除或调整这两类成员 | 是 | 是 | 否 | 否 |
-| 任免管理员、修改家庭名称 | 是 | 否 | 否 | 否 |
-| 转让所有权、永久删除项目、解散家庭 | 是 | 否 | 否 | 否 |
+| 操作                                        | 家庭所有者 | 管理员 | 成员 | 只读成员 |
+| ------------------------------------------- | ---------- | ------ | ---- | -------- |
+| 查看项目、账本、材料、备忘                  | 是         | 是     | 是   | 是       |
+| 新增、编辑、软删除/恢复共享材料、支出、备忘 | 是         | 是     | 是   | 否       |
+| 更新施工阶段状态                            | 是         | 是     | 是   | 否       |
+| 新建项目、预算设置、阶段结构调整            | 是         | 是     | 否   | 否       |
+| 归档/恢复项目                               | 是         | 是     | 否   | 否       |
+| 查看家庭操作记录                            | 是         | 是     | 是   | 是       |
+| 邀请成员/只读成员，移除或调整这两类成员     | 是         | 是     | 否   | 否       |
+| 任免管理员、修改家庭名称                    | 是         | 否     | 否   | 否       |
+| 转让所有权、永久删除项目、解散家庭          | 是         | 否     | 否   | 否       |
 
 成员默认可编辑其他成员的业务记录，符合家人共同记账场景；每次修改均记录操作者。管理员不能管理其他管理员、不能提升自己或修改所有者。所有者始终恰好一名，转让在事务内完成，原所有者转为管理员。
 
@@ -97,21 +97,21 @@ flowchart TD
 
 电脑使用左侧导航，手机使用底部导航：首页、账本、记一笔、备忘、我的。材料、阶段和统计从首页快捷入口进入，避免底部导航过多。“记一笔”点击进入表单，不作为内容列表。
 
-| 页面 | 路由示例 | 核心内容 |
-| --- | --- | --- |
-| 登录/注册/找回密码 | `/login`、`/register`、`/reset-password` | 邮箱账号、密码、隐私说明 |
-| 创建/加入家庭 | `/onboarding` | 家庭名、邀请入口 |
-| 邀请接受 | `/invite/:token` | 家庭与角色预览、确认加入 |
-| 装修总览 | `/f/:familyId/p/:projectId/overview` | 预算、已付/待付、阶段、近期记录 |
-| 项目管理 | `/f/:familyId/projects` | 新建、切换、归档、恢复 |
-| 阶段与详情 | `/f/:familyId/p/:projectId/stages/:stageId?` | 阶段进度、材料和费用 |
-| 材料清单 | `/f/:familyId/p/:projectId/materials` | 分类、采购状态、计划与实际 |
-| 账本 | `/f/:familyId/p/:projectId/ledger` | 组合筛选、金额汇总、记录人 |
-| 记一笔 | `/f/:familyId/p/:projectId/costs/new` | 支出表单，支持可选材料关联 |
-| 装修备忘 | `/f/:familyId/p/:projectId/notes` | 专栏、重点、待确认、粘贴导入 |
-| 预算统计 | `/f/:familyId/p/:projectId/statistics` | 阶段/分类对比、预算分配 |
-| 家庭管理 | `/f/:familyId/settings` | 成员、邀请、角色、操作记录 |
-| 我的 | `/me` | 个人资料、家庭切换、账号安全、退出 |
+| 页面               | 路由示例                                     | 核心内容                           |
+| ------------------ | -------------------------------------------- | ---------------------------------- |
+| 登录/注册/找回密码 | `/login`、`/register`、`/reset-password`     | 邮箱账号、密码、隐私说明           |
+| 创建/加入家庭      | `/onboarding`                                | 家庭名、邀请入口                   |
+| 邀请接受           | `/invite/:token`                             | 家庭与角色预览、确认加入           |
+| 装修总览           | `/f/:familyId/p/:projectId/overview`         | 预算、已付/待付、阶段、近期记录    |
+| 项目管理           | `/f/:familyId/projects`                      | 新建、切换、归档、恢复             |
+| 阶段与详情         | `/f/:familyId/p/:projectId/stages/:stageId?` | 阶段进度、材料和费用               |
+| 材料清单           | `/f/:familyId/p/:projectId/materials`        | 分类、采购状态、计划与实际         |
+| 账本               | `/f/:familyId/p/:projectId/ledger`           | 组合筛选、金额汇总、记录人         |
+| 记一笔             | `/f/:familyId/p/:projectId/costs/new`        | 支出表单，支持可选材料关联         |
+| 装修备忘           | `/f/:familyId/p/:projectId/notes`            | 专栏、重点、待确认、粘贴导入       |
+| 预算统计           | `/f/:familyId/p/:projectId/statistics`       | 阶段/分类对比、预算分配            |
+| 家庭管理           | `/f/:familyId/settings`                      | 成员、邀请、角色、操作记录         |
+| 我的               | `/me`                                        | 个人资料、家庭切换、账号安全、退出 |
 
 路由包含家庭和项目，刷新及分享深链接时仍能恢复上下文，但持有 URL 不等于获得访问权。历史页返回、筛选条件和分页写入 URL；非法或已失效上下文回到家庭选择页。
 
@@ -181,15 +181,15 @@ PWA 首版提供图标、manifest 和安装引导，仅缓存应用静态外壳�
 
 现有统计把未删除支出的已付和待付全部计入实际成本，首页“已支出”易被理解成已支付。新页面改用以下名称，不改变原始金额含义：
 
-| 指标 | 计算规则 |
-| --- | --- |
-| 已付金额 | 有效支出中 `paymentStatus=paid` 的金额合计 |
-| 待付金额 | 有效支出中 `paymentStatus=pending` 的金额合计 |
-| 已记总成本 | 已付金额 + 待付金额 |
-| 预算余额 | 项目预算 − 已记总成本；负数显示超预算 |
-| 材料计划 | 有效材料计划总价合计，不加到已记总成本 |
-| 材料成本差额 | 计划金额 − 关联的有效已付/待付支出合计 |
-| 未分配预算 | 项目预算 − 有效阶段预算合计 |
+| 指标         | 计算规则                                      |
+| ------------ | --------------------------------------------- |
+| 已付金额     | 有效支出中 `paymentStatus=paid` 的金额合计    |
+| 待付金额     | 有效支出中 `paymentStatus=pending` 的金额合计 |
+| 已记总成本   | 已付金额 + 待付金额                           |
+| 预算余额     | 项目预算 − 已记总成本；负数显示超预算         |
+| 材料计划     | 有效材料计划总价合计，不加到已记总成本        |
+| 材料成本差额 | 计划金额 − 关联的有效已付/待付支出合计        |
+| 未分配预算   | 项目预算 − 有效阶段预算合计                   |
 
 例：预算 20 万，材料计划 6 万，已付 3 万，待付 2 万，则已记总成本 5 万、预算余额 15 万；不是成本 11 万。界面注明预算余额并不等于最终可自由支配资金，尚未记入的费用不在成本内。
 
@@ -199,17 +199,17 @@ PWA 首版提供图标、manifest 和安装引导，仅缓存应用静态外壳�
 
 ## 6. 技术方案
 
-| 层次 | 推荐选型 | 原因 |
-| --- | --- | --- |
-| 前端 | Vue 3 + TypeScript + Vite | 适合表单、列表和渐进迁移；独立静态构建 |
-| 路由与数据 | Vue Router + TanStack Vue Query | 深链接、API 缓存和失效管理 |
-| 本地状态 | Pinia | 用户界面状态；不重复保存服务端业务数据 |
-| UI | 自有设计变量与组件，基于 Reka UI 无样式交互组件 | 保留暖色风格与键盘可访问性 |
-| 校验与图表 | Zod + ECharts 按需加载 | 前后端契约与预算对比 |
-| API | Node.js 当前受支持 LTS + Fastify + TypeScript | 与前端共享类型，清晰分离服务权限 |
-| 数据库 | PostgreSQL + Prisma | 家庭关系、事务、约束和迁移 |
-| 文件 | S3 兼容对象存储，按部署环境选择供应商 | 头像等文件独立管理 |
-| 测试 | Vitest + API 集成测试 + Playwright | 金额口径、权限和双端关键流程 |
+| 层次       | 推荐选型                                        | 原因                                   |
+| ---------- | ----------------------------------------------- | -------------------------------------- |
+| 前端       | Vue 3 + TypeScript + Vite                       | 适合表单、列表和渐进迁移；独立静态构建 |
+| 路由与数据 | Vue Router + TanStack Vue Query                 | 深链接、API 缓存和失效管理             |
+| 本地状态   | Pinia                                           | 用户界面状态；不重复保存服务端业务数据 |
+| UI         | 自有设计变量与组件，基于 Reka UI 无样式交互组件 | 保留暖色风格与键盘可访问性             |
+| 校验与图表 | Zod + ECharts 按需加载                          | 前后端契约与预算对比                   |
+| API        | Node.js 当前受支持 LTS + Fastify + TypeScript   | 与前端共享类型，清晰分离服务权限       |
+| 数据库     | PostgreSQL + Prisma                             | 家庭关系、事务、约束和迁移             |
+| 文件       | S3 兼容对象存储，按部署环境选择供应商           | 头像等文件独立管理                     |
+| 测试       | Vitest + API 集成测试 + Playwright              | 金额口径、权限和双端关键流程           |
 
 本方案推荐独立 API，便于脱离微信运行。另一条路线是保留 CloudBase 数据库并新增 Web 身份接入，短期数据迁移较少，但仍要重写鉴权，并验证网页访问、身份映射与部署能力；不能仅替换 `wx.cloud.callFunction` 就完成迁移。
 
@@ -224,7 +224,7 @@ flowchart LR
     C --> H[邮件服务]
 ```
 
-生产使用 HTTPS，同域反向代理静态页面与 `/api`，避免复杂跨域会话。SPA 路由由服务器回退到 index.html，API 路由不能回退 HTML。密钥只放服务端环境变量，建立数据库备份和恢复验证。具体云厂商、域名与邮件供应商在部署时选择。
+生产由服务器现有反向代理统一转发静态页面与 `/api`，容器只提供 HTTP，避免复杂跨域会话。SPA 路由由服务器回退到 index.html，API 路由不能回退 HTML。密钥只放服务端环境变量，建立数据库备份和恢复验证。具体云厂商、域名与邮件供应商在部署时选择。
 
 建议目录（以下尚未创建）：
 
@@ -262,21 +262,21 @@ erDiagram
     note_columns ||--o{ notes : includes
 ```
 
-| 表 | 主要字段与约束 |
-| --- | --- |
-| users | id、规范化 email 唯一、emailVerifiedAt、passwordHash、nickname、avatarKey、status |
-| sessions | tokenHash 唯一、userId、expiresAt、revokedAt |
-| verification_tokens | purpose、subject、tokenHash、expiresAt、consumedAt、attempts |
-| families | id、name、ownerUserId、status、createdAt；所有者必须是有效家庭成员 |
-| family_members | familyId、userId、role、status、joinedAt；familyId+userId 唯一 |
-| invitations | familyId、tokenHash 唯一、role、invitedBy、expiresAt、usedBy、usedAt、revokedAt |
-| projects | familyId、name、address、packageType、budgetCents、工期、status、templateId |
-| stages | familyId、projectId、name、order、budgetCents、status |
-| materials | familyId、projectId、stageId、名称/分类/数量/单位/型号、计划金额、采购状态 |
-| costs | familyId、projectId、stageId 可空、materialId 可空、amountCents、paymentStatus、merchant、paymentMethod、incurredAt、requestId |
-| note_columns / notes | familyId、projectId、专栏顺序 / columnId、title、details、starred、status |
-| user_preferences | userId、familyId、currentProjectId；阶段偏好按 userId+projectId 保存 |
-| audit_logs | familyId、actorUserId、entityType、entityId、action、变更字段、createdAt |
+| 表                   | 主要字段与约束                                                                                                                 |
+| -------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| users                | id、规范化 email 唯一、emailVerifiedAt、passwordHash、nickname、avatarKey、status                                              |
+| sessions             | tokenHash 唯一、userId、expiresAt、revokedAt                                                                                   |
+| verification_tokens  | purpose、subject、tokenHash、expiresAt、consumedAt、attempts                                                                   |
+| families             | id、name、ownerUserId、status、createdAt；所有者必须是有效家庭成员                                                             |
+| family_members       | familyId、userId、role、status、joinedAt；familyId+userId 唯一                                                                 |
+| invitations          | familyId、tokenHash 唯一、role、invitedBy、expiresAt、usedBy、usedAt、revokedAt                                                |
+| projects             | familyId、name、address、packageType、budgetCents、工期、status、templateId                                                    |
+| stages               | familyId、projectId、name、order、budgetCents、status                                                                          |
+| materials            | familyId、projectId、stageId、名称/分类/数量/单位/型号、计划金额、采购状态                                                     |
+| costs                | familyId、projectId、stageId 可空、materialId 可空、amountCents、paymentStatus、merchant、paymentMethod、incurredAt、requestId |
+| note_columns / notes | familyId、projectId、专栏顺序 / columnId、title、details、starred、status                                                      |
+| user_preferences     | userId、familyId、currentProjectId；阶段偏好按 userId+projectId 保存                                                           |
+| audit_logs           | familyId、actorUserId、entityType、entityId、action、变更字段、createdAt                                                       |
 
 业务记录统一有 createdBy、updatedBy、createdAt、updatedAt、version 和可空 deletedAt。服务端从会话写入操作者，不接受客户端伪造。审计不记录密码、会话、邀请令牌；历史修改展示业务字段，限制审计本身的访问范围。
 
@@ -295,17 +295,17 @@ erDiagram
 
 REST 前缀 `/api/v1`。接口以下列资源划分，具体 OpenAPI 契约在实施阶段固化。
 
-| 模块 | 接口示例 |
-| --- | --- |
-| 账号 | `POST /auth/register`、`POST /auth/login`、`POST /auth/logout`、密码重置、`GET /me` |
-| 家庭 | `GET/POST /families`、`GET/PATCH /families/:fid` |
-| 成员 | `GET /families/:fid/members`、`PATCH/DELETE /families/:fid/members/:uid`、`POST /families/:fid/leave` |
-| 邀请 | `POST /families/:fid/invitations`、撤销、`GET /invitations/:token/preview`、`POST /invitations/:token/accept` |
-| 所有权 | `POST /families/:fid/transfer-ownership` |
-| 项目 | `/families/:fid/projects`，项目详情、归档、恢复、销毁 |
-| 装修资源 | `/families/:fid/projects/:pid/stages`、`materials`、`costs`、`note-columns`、`notes` |
-| 汇总 | `GET /families/:fid/projects/:pid/statistics` |
-| 操作记录 | `GET /families/:fid/audit-logs` |
+| 模块     | 接口示例                                                                                                      |
+| -------- | ------------------------------------------------------------------------------------------------------------- |
+| 账号     | `POST /auth/register`、`POST /auth/login`、`POST /auth/logout`、密码重置、`GET /me`                           |
+| 家庭     | `GET/POST /families`、`GET/PATCH /families/:fid`                                                              |
+| 成员     | `GET /families/:fid/members`、`PATCH/DELETE /families/:fid/members/:uid`、`POST /families/:fid/leave`         |
+| 邀请     | `POST /families/:fid/invitations`、撤销、`GET /invitations/:token/preview`、`POST /invitations/:token/accept` |
+| 所有权   | `POST /families/:fid/transfer-ownership`                                                                      |
+| 项目     | `/families/:fid/projects`，项目详情、归档、恢复、销毁                                                         |
+| 装修资源 | `/families/:fid/projects/:pid/stages`、`materials`、`costs`、`note-columns`、`notes`                          |
+| 汇总     | `GET /families/:fid/projects/:pid/statistics`                                                                 |
+| 操作记录 | `GET /families/:fid/audit-logs`                                                                               |
 
 响应统一为 `{ data, meta? }`；错误为 `{ error: { code, message, fields? }, traceId }`。区分 401 登录失效、403 操作受限、404 资源不可访问、409 幂等/版本冲突、422 字段错误、429 频率限制。列表返回分页游标，稳定按业务日期和 ID 排序；筛选汇总与列表使用同一条件。
 
@@ -328,13 +328,13 @@ REST 前缀 `/api/v1`。接口以下列资源划分，具体 OpenAPI 契约在�
 
 ## 10. 实施顺序与验收
 
-| 阶段 | 交付内容 | 完成标准 |
-| --- | --- | --- |
-| 1 页面与工程基础 | 设计变量、响应式布局、路由、示例首页/账本/家庭页 | 390px 和 1440px 两种宽度可用；演示数据有明显标识 |
-| 2 注册与家庭闭环 | 数据库、会话、直接注册、邀请、角色 | 两个账号加入同一家庭；第三个家庭账号无法读写其数据 |
-| 3 装修功能迁移 | 项目、模板、阶段、材料、记账、备忘 | 原有核心能力保留；跨端刷新可见修改 |
-| 4 统计与协作完善 | 金额聚合、版本冲突、审计、撤销、权限变化 | 已付/待付口径正确，重复提交仅一条，两人编辑不静默覆盖 |
-| 5 发布准备 | PWA、部署、备份、真机测试，按需要迁移旧数据 | HTTPS 可访问、深链接刷新正常、数据隔离测试通过 |
+| 阶段             | 交付内容                                         | 完成标准                                              |
+| ---------------- | ------------------------------------------------ | ----------------------------------------------------- |
+| 1 页面与工程基础 | 设计变量、响应式布局、路由、示例首页/账本/家庭页 | 390px 和 1440px 两种宽度可用；演示数据有明显标识      |
+| 2 注册与家庭闭环 | 数据库、会话、直接注册、邀请、角色               | 两个账号加入同一家庭；第三个家庭账号无法读写其数据    |
+| 3 装修功能迁移   | 项目、模板、阶段、材料、记账、备忘               | 原有核心能力保留；跨端刷新可见修改                    |
+| 4 统计与协作完善 | 金额聚合、版本冲突、审计、撤销、权限变化         | 已付/待付口径正确，重复提交仅一条，两人编辑不静默覆盖 |
+| 5 发布准备       | PWA、部署、备份、真机测试，按需要迁移旧数据      | 服务器反代可访问、深链接刷新正常、数据隔离测试通过    |
 
 重点验收用例：
 

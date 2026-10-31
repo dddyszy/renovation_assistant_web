@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, watch } from "vue";
+import { computed, onMounted, onUnmounted, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { useQueryClient } from "@tanstack/vue-query";
 import {
@@ -16,12 +16,10 @@ import {
   ChevronDown,
   ArrowUpRight,
   Check,
-  Menu,
 } from "@lucide/vue";
-import { useWorkspace } from "./workspace";
+import { useWorkspace } from "./stores/workspace";
 import ModalHost from "./components/ModalHost.vue";
 import EmptyState from "./components/EmptyState.vue";
-import { request } from "./api";
 const w = useWorkspace(),
   route = useRoute(),
   router = useRouter(),
@@ -40,7 +38,9 @@ const nav = [
 const pageLabel = computed(
   () =>
     nav.find((n) => n.path === route.path)?.label ||
-    ({ "/family": "家庭管理", "/me": "我的账号" } as any)[route.path] ||
+    ({ "/family": "家庭管理", "/me": "我的账号" } as Record<string, string>)[
+      route.path
+    ] ||
     "筑家手记",
 );
 async function switchFamily(event: Event) {
@@ -79,8 +79,7 @@ watch(
       w.fid &&
       !publicPage.value &&
       !route.path.startsWith("/invite/") &&
-      (route.query.family !== w.fid ||
-        route.query.project !== (w.pid || undefined))
+      (route.query.family !== w.fid || route.query.project !== (w.pid || undefined))
     )
       router.replace({
         path: route.path,
@@ -88,8 +87,15 @@ watch(
       });
   },
 );
+let mounted = true;
+function sessionExpired() {
+  w.clear();
+  client.clear();
+  router.replace("/login");
+}
 onMounted(async () => {
   await w.bootstrap();
+  if (!mounted) return;
   if (!w.user && !publicPage.value && !w.failure)
     await router.replace({
       path: "/login",
@@ -97,17 +103,17 @@ onMounted(async () => {
     });
   else if (w.user && publicPage.value && route.path !== "/reset-password")
     await router.replace("/");
-  window.addEventListener("session-expired", () => {
-    w.clear();
-    client.clear();
-    router.replace("/login");
-  });
+  if (!mounted) return;
+  window.addEventListener("session-expired", sessionExpired);
   window.addEventListener("workspace-unavailable", recover);
 });
+onUnmounted(() => {
+  mounted = false;
+  window.removeEventListener("session-expired", sessionExpired);
+  window.removeEventListener("workspace-unavailable", recover);
+});
 const needsProject = computed(
-  () =>
-    !["/family", "/me"].includes(route.path) &&
-    !route.path.startsWith("/invite/"),
+  () => !["/family", "/me"].includes(route.path) && !route.path.startsWith("/invite/"),
 );
 </script>
 <template>
@@ -138,7 +144,7 @@ const needsProject = computed(
             @change="switchFamily"
           >
             <option v-if="!w.families.length" value="">创建你的家庭</option>
-            <option v-for="f in w.families" :value="f.id" :key="f.id">
+            <option v-for="f in w.families" :key="f.id" :value="f.id">
               {{ f.name }}
             </option></select
           ><ChevronDown :size="14" />
@@ -167,9 +173,7 @@ const needsProject = computed(
           to="/family"
           :class="['utility-link', { active: route.path === '/family' }]"
           ><Users :size="18" />家庭管理<ArrowUpRight :size="15" /></RouterLink
-        ><RouterLink
-          to="/me"
-          :class="['account-link', { active: route.path === '/me' }]"
+        ><RouterLink to="/me" :class="['account-link', { active: route.path === '/me' }]"
           ><span class="avatar">{{ w.user.nickname.slice(0, 1) }}</span
           ><span
             ><strong>{{ w.user.nickname }}</strong
@@ -181,12 +185,11 @@ const needsProject = computed(
     <div class="workspace">
       <header class="topbar">
         <span class="breadcrumb"
-          ><House :size="15" /><span class="crumb-divider">/</span
-          >{{ pageLabel }}</span
+          ><House :size="15" /><span class="crumb-divider">/</span>{{ pageLabel }}</span
         >
         <div class="top-actions">
           <div class="project-switch">
-            <select aria-label="切换装修项目" v-model="w.pid">
+            <select v-model="w.pid" aria-label="切换装修项目">
               <option v-if="!w.projects.length" value="">尚无装修项目</option>
               <option v-for="p in w.projects" :key="p.id" :value="p.id">
                 {{ p.name }}{{ p.status === "archived" ? "（已归档）" : "" }}
@@ -207,11 +210,7 @@ const needsProject = computed(
       </header>
       <div class="mobile-context">
         <div><img src="/icon.svg" alt="" /><strong>筑家手记</strong></div>
-        <select
-          aria-label="手机端切换家庭"
-          :value="w.fid"
-          @change="switchFamily"
-        >
+        <select aria-label="手机端切换家庭" :value="w.fid" @change="switchFamily">
           <option v-if="!w.families.length" value="">创建家庭</option>
           <option v-for="f in w.families" :key="f.id" :value="f.id">
             {{ f.name }}
@@ -219,10 +218,7 @@ const needsProject = computed(
         </select>
       </div>
       <main class="main-content">
-        <div
-          v-if="w.project?.status === 'archived' && needsProject"
-          class="info-box"
-        >
+        <div v-if="w.project?.status === 'archived' && needsProject" class="info-box">
           当前项目已归档，所有内容仅供查看。<button
             v-if="w.isAdmin"
             class="text-btn"
@@ -232,10 +228,7 @@ const needsProject = computed(
           </button>
         </div>
         <RouterView v-if="route.path.startsWith('/invite/')" />
-        <div
-          v-else-if="!w.family && route.path !== '/me'"
-          class="welcome-panel"
-        >
+        <div v-else-if="!w.family && route.path !== '/me'" class="welcome-panel">
           <span class="eyebrow">家的故事，从这里开始</span>
           <h1>一个家，一本共同的手记。</h1>
           <p>
@@ -244,9 +237,7 @@ const needsProject = computed(
           <button class="btn primary" @click="w.open('family')">
             <Plus :size="18" />创建我的家庭
           </button>
-          <p class="muted small-text">
-            收到邀请？直接打开家人分享的链接即可加入。
-          </p>
+          <p class="muted small-text">收到邀请？直接打开家人分享的链接即可加入。</p>
         </div>
         <EmptyState
           v-else-if="needsProject && !w.project"
@@ -267,11 +258,7 @@ const needsProject = computed(
         ><House :size="21" /><span>首页</span></RouterLink
       ><RouterLink to="/ledger" :class="{ active: route.path === '/ledger' }"
         ><NotebookPen :size="21" /><span>账本</span></RouterLink
-      ><button
-        class="mobile-add"
-        :disabled="!w.canWrite"
-        @click="w.open('cost')"
-      >
+      ><button class="mobile-add" :disabled="!w.canWrite" @click="w.open('cost')">
         <span><Plus :size="24" /></span><small>记一笔</small></button
       ><RouterLink to="/notes" :class="{ active: route.path === '/notes' }"
         ><BookOpen :size="21" /><span>备忘</span></RouterLink
@@ -284,11 +271,7 @@ const needsProject = computed(
   <Transition name="toast"
     ><div v-if="w.toast" class="toast-message" role="status">
       <Check :size="17" />{{ w.toast
-      }}<button
-        v-if="w.undoAction"
-        class="undo-button"
-        @click="w.undoAction?.()"
-      >
+      }}<button v-if="w.undoAction" class="undo-button" @click="w.undoAction?.()">
         撤销
       </button>
     </div></Transition

@@ -1,10 +1,12 @@
 import { PGlite } from "@electric-sql/pglite";
-import pg from "pg";
-import { readFile, mkdir } from "node:fs/promises";
+import { mkdir, readFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
+import pg from "pg";
+// SQL projections vary by query; keep the dynamic driver boundary in this adapter.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- raw SQL rows are normalized here
 export type Row = Record<string, any>;
 export interface Db {
-  query(sql: string, args?: any[]): Promise<Row[]>;
+  query<T extends object = Row>(sql: string, args?: unknown[]): Promise<T[]>;
   transaction<T>(fn: (db: Db) => Promise<T>): Promise<T>;
   close(): Promise<void>;
 }
@@ -37,8 +39,8 @@ export async function createDb(
       max: 10,
     });
     const wrap = (client: pg.Pool | pg.PoolClient): Db => ({
-      query: async (sql, args = []) =>
-        (await client.query(sql, args)).rows.map(normalize),
+      query: async <T extends object = Row>(sql: string, args: unknown[] = []) =>
+        (await client.query(sql, args)).rows.map((row: Row) => normalize(row) as T),
       transaction: async (fn) => {
         const c = await pool.connect();
         try {
@@ -64,17 +66,14 @@ export async function createDb(
     const client = new PGlite(location);
     await client.waitReady;
     const wrap = (c: Pick<PGlite, "query">): Db => ({
-      query: async (sql, args = []) =>
-        (await c.query<Row>(sql, args)).rows.map(normalize),
+      query: async <T extends object = Row>(sql: string, args: unknown[] = []) =>
+        (await c.query<Row>(sql, args)).rows.map((row) => normalize(row) as T),
       transaction: (fn) => client.transaction((tx) => fn(wrap(tx))),
       close: () => client.close(),
     });
     db = wrap(client);
   }
-  const schema = await readFile(
-    new URL("./schema.sql", import.meta.url),
-    "utf8",
-  );
+  const schema = await readFile(new URL("./schema.sql", import.meta.url), "utf8");
   for (const sql of schema
     .split(";")
     .map((s) => s.trim())

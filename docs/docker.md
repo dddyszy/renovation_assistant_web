@@ -6,12 +6,12 @@
 
 ## 选择存储方式
 
-| 模式 | 数据存在哪里 | 配置文件 | 适用情况 |
-| --- | --- | --- | --- |
-| 内置数据库 | 应用使用 PGlite，目录持久化到 Docker 卷 | `compose.yaml` | 个人或单个家庭，最少组件 |
-| 外部 PostgreSQL | 独立服务器、云数据库或已有 PostgreSQL | 再加 `compose.external.yaml` | 数据库已有专人维护，应用与存储分离 |
-| Compose 自带 PostgreSQL 18（默认） | 单独数据库容器及独立数据卷 | 再加 `compose.postgres.yaml` | 推荐的完整 PostgreSQL 部署 |
-| PostgreSQL 17 兼容 | 单独数据库容器及原有 17 卷 | 改用 `compose.postgres17.yaml` | 已有 17 数据或仍需使用 17 |
+| 模式                               | 数据存在哪里                            | 配置文件                       | 适用情况                           |
+| ---------------------------------- | --------------------------------------- | ------------------------------ | ---------------------------------- |
+| 内置数据库                         | 应用使用 PGlite，目录持久化到 Docker 卷 | `compose.yaml`                 | 个人或单个家庭，最少组件           |
+| 外部 PostgreSQL                    | 独立服务器、云数据库或已有 PostgreSQL   | 再加 `compose.external.yaml`   | 数据库已有专人维护，应用与存储分离 |
+| Compose 自带 PostgreSQL 18（默认） | 单独数据库容器及独立数据卷              | 再加 `compose.postgres.yaml`   | 推荐的完整 PostgreSQL 部署         |
+| PostgreSQL 17 兼容                 | 单独数据库容器及原有 17 卷              | 改用 `compose.postgres17.yaml` | 已有 17 数据或仍需使用 17          |
 
 这三种模式共用同一套业务表和权限规则。内置模式只运行一个应用实例；外部 PostgreSQL 可以让应用容器独立重建。当前限流在应用进程内，尚不建议直接扩成多个应用副本。
 
@@ -21,7 +21,7 @@
 
 ## 准备配置
 
-各参数的必填条件、填写格式、默认值和四种完整示例见 [Docker 参数填写指南](docker-parameters.md)。内置模式通常只需修改 APP_ORIGIN；使用随附 Caddy 时再填写 DOMAIN；使用 PostgreSQL 时再填写对应数据库信息。
+各参数的必填条件、填写格式、默认值和完整示例见 [Docker 参数填写指南](docker-parameters.md)。内置模式通常只需修改 APP_ORIGIN；使用 PostgreSQL 时再填写对应数据库信息。应用提供 HTTP 服务，反向代理由服务器现有软件管理。
 
 ```bash
 cp .env.docker.example .env.docker
@@ -31,31 +31,48 @@ cp .env.docker.example .env.docker
 
 ```dotenv
 APP_IMAGE_TAG=0.9.5
-APP_ORIGIN=https://home.example.com
-DOMAIN=home.example.com
+APP_ORIGIN=http://home.example.com
 APP_PORT=8080
 ```
 
-`APP_ORIGIN` 是浏览器真实访问的 HTTPS 来源，不带结尾 `/`，`DOMAIN` 只写域名。SMTP 可不填写，注册没有邮箱验证码；邮件找回密码需要 SMTP。
+`APP_ORIGIN` 是浏览器真实访问的来源，包含协议、域名或 IP，以及实际端口；不要填写容器内部地址或子路径。SMTP 可不填写，注册没有邮箱验证码；邮件找回密码需要 SMTP。
 
-## 内置模式
+## 启动应用与服务器反代
 
-已有 HTTPS 反向代理时：
+以下以内置模式为例：
 
 ```bash
 docker compose --env-file .env.docker -f compose.yaml config --quiet
 docker compose --env-file .env.docker -f compose.yaml up -d --build --wait
 ```
 
-将现有代理转发到 `127.0.0.1:8080`。应用绑定的宿主机端口默认只监听本机。`http://127.0.0.1:8080/api/v1/health` 可用于服务检查，浏览器登录应从配置的 HTTPS 域名访问，生产会话 Cookie 使用 Secure。
+宿主机端口默认只监听 `127.0.0.1:8080`。将服务器已有的 Nginx、宝塔或其他代理转发到该地址，整个站点一起代理，包括页面和 `/api/`，无需单独部署前端。应用不管理证书、站点域名或代理进程。
 
-没有代理时，可以叠加随附的 Caddy：
+Nginx 示例见 [deploy/nginx.conf](../deploy/nginx.conf)，可合并到服务器的现有站点配置：
 
-```bash
-docker compose --env-file .env.docker -f compose.yaml -f compose.https.yaml up -d --build --wait
+```nginx
+server {
+    listen 80;
+    server_name home.example.com;
+
+    location / {
+        proxy_pass http://127.0.0.1:8080;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}
 ```
 
-域名 A/AAAA 记录需指向服务器，80/443 端口可达，Caddy 会申请并续期证书。已有服务占用这些端口时使用已有代理方案。证书状态依赖真实 DNS 和网络，配置语法检查不能验证证书签发。
+对应 `APP_ORIGIN=http://home.example.com`。如果入口带非默认端口，也要把端口写入 APP_ORIGIN。修改配置后重新创建应用容器；入口来源用于写请求校验与邮件找回链接，不依赖代理头自动推断。会话 Cookie 的 Secure 属性按入口协议设置，HttpOnly 和 SameSite 始终保留。
+
+反代也运行在容器内时，将代理和应用加入同一个 Docker 网络，通过服务名 `app:3001` 转发；代理容器中的 `127.0.0.1` 不是宿主机。不需要把数据库端口暴露给代理。
+
+应用部署在站点根路径，例如 `http://home.example.com`；暂不支持 `/renovation/` 之类的子路径部署。服务器上可直接用 `curl --fail http://127.0.0.1:8080/api/v1/health` 检查应用，再从配置的域名测试注册和登录。
+
+本次 HTTP 入口调整需要用当前源码重新构建镜像。已发布的旧 0.9.5 镜像尚未包含该改动；新镜像发布前使用上述 `--build` 命令。
 
 ## 外置数据库模式
 
@@ -77,7 +94,7 @@ docker compose --env-file .env.docker -f compose.yaml -f compose.external.yaml c
 docker compose --env-file .env.docker -f compose.yaml -f compose.external.yaml up -d --build --wait
 ```
 
-需要 Caddy 时在上述命令中继续加 `-f compose.https.yaml`。外置配置移除应用数据卷，数据库记录由外部服务持久化。`POSTGRES_HOST=127.0.0.1` 会指向容器自身；访问宿主机数据库应使用 `host.docker.internal`，并让宿主机 PostgreSQL 接受来自容器网络的连接。
+外置配置移除应用数据卷，数据库记录由外部服务持久化。`POSTGRES_HOST=127.0.0.1` 会指向容器自身；访问宿主机数据库应使用 `host.docker.internal`，并让宿主机 PostgreSQL 接受来自容器网络的连接。
 
 ## Compose 自带 PostgreSQL 18，兼容 17
 
@@ -87,7 +104,7 @@ docker compose --env-file .env.docker -f compose.yaml -f compose.external.yaml u
 docker compose --env-file .env.docker -f compose.yaml -f compose.postgres.yaml up -d --build --wait
 ```
 
-默认镜像为 `postgres:18-alpine`，数据卷为 `zhu-jia-web_postgres18_data`，挂载到 `/var/lib/postgresql`，实际数据目录为 `/var/lib/postgresql/18/docker`。应用等待数据库健康后启动，数据库不向宿主机公开 5432 端口。容器私有网络中的数据库连接关闭 TLS；浏览器到应用仍使用 HTTPS。
+默认镜像为 `postgres:18-alpine`，数据卷为 `zhu-jia-web_postgres18_data`，挂载到 `/var/lib/postgresql`，实际数据目录为 `/var/lib/postgresql/18/docker`。应用等待数据库健康后启动，数据库不向宿主机公开 5432 端口。容器私有网络中的数据库连接关闭 TLS，服务器代理仍转发到同一个应用端口。
 
 需要 17 时将命令中的数据库配置改为 `-f compose.postgres17.yaml`。该配置继续使用原来的 `zhu-jia-web_postgres_data` 卷。**原先运行 17 的部署，更新配置文件后要选择 17 兼容文件，或先按升级流程迁移；不能直接用 18 读取旧卷。**完整命令与说明见 [PostgreSQL 18 与 17](postgresql.md)。
 

@@ -20,6 +20,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       APP_IMAGE_TAG: ${{ inputs.version }}
+      # The immutable 0.9.5 image predates HTTP entry-point support.
       APP_ORIGIN: https://renovation.example.test
       POSTGRES_PASSWORD: "ci:published@image/password%#"
     steps:

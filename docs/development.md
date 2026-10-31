@@ -4,6 +4,8 @@
 
 ## 开发环境
 
+推荐 Node.js 24 LTS，最低 22.13。目录、命名与贡献约定见 [开发与协作规范](../CONTRIBUTING.md)。提交前运行 `npm run check`，自动修复与格式化分别使用 `npm run lint:fix`、`npm run format`。
+
 `npm run dev` 同时启动 Vite 与 Fastify。浏览器的 `/api/v1` 请求由 Vite 转发到本机 3001 端口。写请求必须携带同源 Origin 和应用请求头；开发环境允许本机及局域网的 5173 端口，未开放跨域 CORS。
 
 默认开发数据库是 `.data/postgres` 中的 PGlite。它运行 PostgreSQL 引擎并将数据落盘，适合本地与单进程体验。设置 `DATABASE_URL=postgresql://...`，或清空该变量并设置 PGHOST 等 PG 环境变量后，改用 pg 连接独立 PostgreSQL；两个适配器共用同一份 SQL schema。完整 PostgreSQL 部署默认使用 18，兼容 17；两种版本均已通过 CI 接口与容器验证，见 [PostgreSQL 部署说明](postgresql.md)。实际服务器的网络、权限和 TLS 仍需验证。
@@ -18,7 +20,7 @@
 DATABASE_URL=postgresql://USER:PASSWORD@HOST:5432/zhu_jia
 PORT=3001
 HOST=127.0.0.1
-APP_ORIGIN=https://your-domain.example
+APP_ORIGIN=http://your-domain.example
 SMTP_HOST=smtp.your-provider.example
 SMTP_PORT=587
 SMTP_USER=your-user
@@ -36,9 +38,9 @@ npm run build
 npm start
 ```
 
-API 服务会托管 `dist/`，并为前端深链接返回 index.html，未知 API 返回 JSON 404。反向代理将同一 HTTPS 域名的请求转发到该服务。生产 Cookie 采用 Secure + HttpOnly + SameSite=Lax，错误的 Origin 和缺失应用请求头的写请求会被拒绝。若修改公网域名，必须同步更新 `APP_ORIGIN`。
+API 服务会托管 `dist/`，并为前端深链接返回 index.html，未知 API 返回 JSON 404。服务器现有反向代理将整个站点转发到该服务。Cookie 始终采用 HttpOnly + SameSite=Lax，Secure 属性由 APP_ORIGIN 的协议决定，错误的 Origin 和缺失应用请求头的写请求会被拒绝。若修改公网域名，必须同步更新 `APP_ORIGIN`。
 
-上线采用生产启动脚本，生产检查会拒绝缺少 HTTPS `APP_ORIGIN` 的环境。SMTP 为可选项；配置 `SMTP_HOST` 时必须同时配置 `SMTP_FROM`。未开通 SMTP 的生产环境会明确提示邮件找回暂不可用，不返回本地重置链接。演示账号和开发数据使用独立数据库。
+上线采用生产启动脚本，生产检查要求显式设置有效的 `APP_ORIGIN`，允许普通 HTTP 入口。SMTP 为可选项；配置 `SMTP_HOST` 时必须同时配置 `SMTP_FROM`。未开通 SMTP 的生产环境会明确提示邮件找回暂不可用，不返回本地重置链接。演示账号和开发数据使用独立数据库。
 
 ## 数据备份
 
@@ -63,7 +65,7 @@ API 服务会托管 `dist/`，并为前端深链接返回 index.html，未知 AP
 
 已提供 192px 和 512px 图标、manifest 与 Service Worker。生产构建注册 Worker，开发模式不注册。Worker 只缓存公共静态外壳、JS/CSS 与图标，排除全部 `/api/` 请求，也不会按含邀请令牌的导航 URL 建立缓存项。
 
-手机可以直接访问网页。添加到主屏幕通常需要 HTTPS 或 localhost；iOS Safari 使用系统“分享 → 添加到主屏幕”，Android 由浏览器提供安装入口。仍需在目标真机确认系统键盘、安全区和安装行为。
+手机可以直接访问网页。添加到主屏幕和剪贴板功能受浏览器安全上下文限制；iOS Safari 使用系统“分享 → 添加到主屏幕”，Android 由浏览器提供安装入口。仍需在目标真机确认系统键盘、安全区和安装行为。
 
 ## 本次验证
 
@@ -76,8 +78,8 @@ API 服务会托管 `dist/`，并为前端深链接返回 index.html，未知 AP
 - 外置存储：本机临时独立 PostgreSQL 17 集群验证同一套 API；通过 PG 环境变量传递含特殊字符的密码，无需拼 URL。
 - PostgreSQL 18 / 17：CI 分别验证真实服务版本、API 与迁移；已发布的 0.9.5 镜像分别通过两种版本的容器重建持久化、记账接口和备份恢复验证，运行记录见 [PostgreSQL 部署说明](postgresql.md#备份与验证)。
 - 存储切换：已验证 PGlite 到临时独立 PostgreSQL 17 的迁移；目标金额、JSON 描述、偏好及软删除一致，且不会复制登录会话或覆盖已使用的目标库。
-- Compose：使用官方 Compose CLI 检查内置、外置、自带 PostgreSQL、目录挂载和 HTTPS 组合，确认数据库模式不误挂内置卷。
+- Compose：使用官方 Compose CLI 检查内置、外置、自带 PostgreSQL、目录挂载组合，确认数据库模式不误挂内置卷。
 - 浏览器：在本地内置浏览器使用虚构演示账号验证登录、首页、材料关联付款、软删除/恢复/即时撤销、备忘编辑、家庭与项目切换；检查 360px/390px/1440px 宽度。截图存放于本机 artifacts，未纳入源码。
 - 小程序参考：使用现有微信开发者工具读取并截图首页，参考其配色、预算卡片、阶段与底部导航，没有调用原项目写入测试。
 
-本机没有 Docker 引擎；[GitHub Actions 验证](https://github.com/dddyszy/renovation_assistant_web/actions/runs/40908628585)已完成 Linux AMD64 上的容器构建、内置数据库与 PostgreSQL 18 / 17 HTTP 验收。GHCR 的双架构构建与拉取验证由独立发布流程处理，见容器镜像仓库文档。真实邮件、正式域名证书、目标服务器和 iOS/Android 真机仍未验证。
+本机没有 Docker 引擎；[GitHub Actions 验证](https://github.com/dddyszy/renovation_assistant_web/actions/runs/40908628585)已完成 Linux AMD64 上的容器构建、内置数据库与 PostgreSQL 18 / 17 HTTP 验收。GHCR 的双架构构建与拉取验证由独立发布流程处理，见容器镜像仓库文档。真实邮件、目标服务器和 iOS/Android 真机仍未验证。

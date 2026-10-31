@@ -49,13 +49,15 @@ docker pull ghcr.io/dddyszy/renovation_assistant_web:0.9.5
 
 ## 用 Compose 直接拉取运行
 
+本次 HTTP 入口调整尚未发布到现有 0.9.5 镜像；需要该行为时先按 [Docker 部署](docker.md) 从当前源码构建。下面的拉取方式和 HTTP 示例用于包含改动的新镜像发布后，不会因更新 Compose 文件而改变旧镜像代码。
+
 部署前填写哪些参数、哪些可以留空，见 [Docker 参数填写指南](docker-parameters.md)。
 
-服务器只需复制选用的 Compose 配置、`.env.docker.example`，使用 Caddy 时再复制 `deploy/Caddyfile`。无需上传源代码和 node_modules。
+服务器只需复制选用的 Compose 配置、`.env.docker.example`。无需上传源代码和 node_modules。
 
 ```bash
 cp .env.docker.example .env.docker
-# 编辑 APP_ORIGIN、DOMAIN；外部/自带 PostgreSQL 时同时填写数据库变量。
+# 编辑 APP_ORIGIN；外部/自带 PostgreSQL 时同时填写数据库变量。
 ```
 
 内置数据库：
@@ -79,7 +81,7 @@ docker compose --env-file .env.docker -f compose.yaml -f compose.image.yaml -f c
 
 上述命令默认使用 PostgreSQL 18。需要兼容 17 时将数据库配置换成 `-f compose.postgres17.yaml`，应用镜像地址不变。已有数据库跨主版本升级需迁移数据，见 [PostgreSQL 说明](postgresql.md)。
 
-HTTPS 代理、内置数据目录挂载均可继续叠加对应配置，规则见 [Docker 部署](docker.md)。`compose.image.yaml` 删除 build 配置并启用镜像拉取，服务器不会构建。
+服务器现有代理转发到 `127.0.0.1:8080`，内置数据目录挂载可叠加 `compose.bind.yaml`，规则见 [Docker 部署](docker.md)。`compose.image.yaml` 删除 build 配置并启用镜像拉取，服务器不会构建。
 
 ## 不用 Compose 的内置模式示例
 
@@ -89,11 +91,11 @@ docker run -d --name zhu-jia --init --restart unless-stopped \
   -p 127.0.0.1:8080:3001 \
   -v zhu_jia_data:/app/data \
   -e DATABASE_URL=/app/data/postgres \
-  -e APP_ORIGIN=https://home.example.com \
+  -e APP_ORIGIN=http://home.example.com \
   ghcr.io/dddyszy/renovation_assistant_web:0.9.5
 ```
 
-将真实 HTTPS 入口代理到该端口。数据保存在命名卷，替换容器不删除数据库。生产 Cookie 要求浏览器从 HTTPS 入口访问。
+将服务器现有站点代理到该端口，APP_ORIGIN 填浏览器实际访问的入口。数据保存在命名卷，替换容器不删除数据库。
 
 ## 升级与定位问题
 

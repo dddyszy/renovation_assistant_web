@@ -4,7 +4,7 @@
 
 ```mermaid
 flowchart LR
-    A[电脑和手机浏览器] --> B[HTTPS 反向代理]
+    A[电脑和手机浏览器] --> B[服务器现有反向代理]
     B --> C[Fastify 静态资源与 API]
     C --> D[会话及家庭成员权限]
     D --> E[项目 阶段 材料 支出 备忘]
@@ -16,15 +16,15 @@ flowchart LR
 
 ## 前端
 
-`src/main.ts` 定义路由，页面通过动态 import 加载；`App.vue` 处理电脑侧栏、手机导航、登录状态和当前家庭/项目。Pinia 的 `workspace` 保存界面上下文，Vue Query 管理业务请求、缓存和失效刷新。
+`src/router/index.ts` 定义路由，页面通过动态 import 加载；`App.vue` 处理电脑侧栏、手机导航、登录状态和当前家庭/项目。Pinia 的 `src/stores/workspace.ts` 保存界面上下文，Vue Query 管理业务请求、缓存和失效刷新。
 
 家庭或项目切换后，旧查询缓存会清理，只有当前项目确实属于所选家庭时才请求业务数据。当前家庭、项目保存到服务器与本地偏好，链接使用 `family`、`project` 查询参数恢复上下文；URL 不授予访问权限。
 
-金额、流程模板、角色和备忘导入规则放在 `shared/domain.ts`。图表使用 CSS/SVG 和文字明细；前端没有数据库凭据，不直接访问存储。
+HTTP 请求与错误处理在 `src/services/api.ts`，项目查询在 `src/composables/useProjectQuery.ts`；`shared/api.ts` 定义响应契约。金额、流程模板、角色和备忘导入规则放在 `shared/domain.ts`。图表使用 CSS/SVG 和文字明细；前端没有数据库凭据，不直接访问存储。
 
 ## 服务端
 
-`server/app.ts` 负责字段校验、会话、角色、业务操作及错误映射，`server/index.ts` 负责数据库初始化、静态资源、端口和终止信号。`server/db.ts` 暴露 query、transaction、close 三个接口，两个数据库适配器共用 `schema.sql`。
+`server/app.ts` 只装配插件、上下文和业务路由。`server/routes/` 按账号、家庭、项目、阶段、记录、备忘与统计组织接口；`server/context.ts` 复用会话、权限和写事务守卫，`server/schemas.ts` 保存 Zod 输入约束，`server/plugins/security.ts` 处理请求安全和错误映射。`server/index.ts` 负责数据库初始化、静态资源、端口和终止信号。`server/db.ts` 暴露 query、transaction、close 三个接口，两个数据库适配器共用 `schema.sql`。
 
 内置适配器使用真实 PostgreSQL 引擎的 PGlite 并落盘，适合单进程。外置适配器使用 pg 连接池，数据库可以由 Compose、宿主机或云服务运行。两者不是直接可互换的数据文件格式，切换存储需要逻辑迁移。
 
@@ -32,7 +32,7 @@ flowchart LR
 
 ## 身份和权限
 
-注册使用邮箱、密码与昵称，不验证邮箱。密码使用 Argon2id；服务端只保存随机会话令牌的哈希。Cookie 为 HttpOnly、SameSite=Lax，生产再启用 Secure；写请求检查 Origin 与应用请求头，认证接口限流。
+注册使用邮箱、密码与昵称，不验证邮箱。密码使用 Argon2id；服务端只保存随机会话令牌的哈希。Cookie 为 HttpOnly、SameSite=Lax，Secure 属性按浏览器入口协议设置；写请求检查 Origin 与应用请求头，认证接口限流。
 
 每次访问先验证会话和家庭成员，再确认项目及关联资源属于相同家庭、相同项目。非成员拿到资源 ID 也无法查询。所有者、管理员、成员、只读成员的业务边界见用户指南。
 
@@ -47,3 +47,7 @@ flowchart LR
 ## 当前扩展边界
 
 应用目前一个实例、进程内限流，前台刷新而非 WebSocket 推送。没有后台提醒队列、对象存储、账号注销或逐字段变更历史。schema 是初始建表脚本，后续结构变更需要正式版本化迁移。相关工作按路线图推进，不通过直接堆叠缓存或服务数量解决。
+
+## 开发约定
+
+目录职责、依赖边界、命名、类型、测试与评审规则见 [开发与协作规范](../CONTRIBUTING.md)。ESLint、Prettier、TypeScript 严格检查通过 `npm run check` 接入 CI 与 Docker 构建。

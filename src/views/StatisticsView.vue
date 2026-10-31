@@ -1,36 +1,23 @@
 <script setup lang="ts">
 import { computed } from "vue";
-import { ChartNoAxesCombined, ArrowUpRight } from "@lucide/vue";
-import { useWorkspace } from "../workspace";
-import { useProjectQuery } from "../queries";
+import { ArrowUpRight } from "@lucide/vue";
+import { useWorkspace } from "../stores/workspace";
+import { useProjectQuery } from "../composables/useProjectQuery";
 import { money } from "../../shared/domain";
 import QueryState from "../components/QueryState.vue";
 const w = useWorkspace(),
   query = useProjectQuery("statistics"),
   s = computed(() => query.data.value?.data);
 const max = computed(() =>
-  Math.max(
-    1,
-    ...(s.value?.stages || []).flatMap((s: any) => [
-      s.budgetCents,
-      s.actualCents,
-    ]),
-  ),
+  Math.max(1, ...(s.value?.stages || []).flatMap((s) => [s.budgetCents, s.actualCents])),
 );
-const palette = [
-  "#8b5e3c",
-  "#8c9d80",
-  "#c2a16f",
-  "#c1836a",
-  "#9c9690",
-  "#c7b9a3",
-];
+const palette = ["#8b5e3c", "#8c9d80", "#c2a16f", "#c1836a", "#9c9690", "#c7b9a3"];
 const gradient = computed(() => {
   let from = 0;
   return (
     "conic-gradient(" +
     (s.value?.byCategory || [])
-      .map((c: any, i: number) => {
+      .map((c, i) => {
         const to = from + (c.amountCents / s.value!.totalCents) * 100;
         const str = `${palette[i % palette.length]} ${from}% ${to}%`;
         from = to;
@@ -67,10 +54,7 @@ const gradient = computed(() => {
       </div>
       <div class="panel">
         <span>已记总成本</span><strong>{{ money(s.totalCents) }}</strong
-        ><small
-          >已付 {{ money(s.paidCents) }} + 待付
-          {{ money(s.pendingCents) }}</small
-        >
+        ><small>已付 {{ money(s.paidCents) }} + 待付 {{ money(s.pendingCents) }}</small>
       </div>
       <div class="panel">
         <span>{{ s.balanceCents < 0 ? "超出预算" : "预算余额" }}</span
@@ -93,30 +77,21 @@ const gradient = computed(() => {
             <strong>{{ stage.name }}</strong
             ><small
               :class="{
-                danger:
-                  stage.budgetCents > 0 &&
-                  stage.actualCents > stage.budgetCents,
+                danger: stage.budgetCents > 0 && stage.actualCents > stage.budgetCents,
               }"
-              >{{ money(stage.actualCents) }} /
-              {{ money(stage.budgetCents) }}</small
+              >{{ money(stage.actualCents) }} / {{ money(stage.budgetCents) }}</small
             >
           </div>
           <div class="double-bars">
-            <span
-              :style="{ width: (stage.budgetCents / max) * 100 + '%' }"
-            /><span
+            <span :style="{ width: (stage.budgetCents / max) * 100 + '%' }" /><span
               :class="{
-                over:
-                  stage.budgetCents > 0 &&
-                  stage.actualCents > stage.budgetCents,
+                over: stage.budgetCents > 0 && stage.actualCents > stage.budgetCents,
               }"
               :style="{ width: (stage.actualCents / max) * 100 + '%' }"
             />
           </div>
         </div>
-        <p v-if="!s.stages.length" class="muted">
-          尚无阶段，先安排装修计划吧。
-        </p>
+        <p v-if="!s.stages.length" class="muted">尚无阶段，先安排装修计划吧。</p>
       </section>
       <section class="panel chart-panel">
         <div class="section-head">
@@ -141,9 +116,7 @@ const gradient = computed(() => {
                 :style="{ background: palette[Number(i) % palette.length] }"
               />{{ c.category }}</span
             ><strong>{{ money(c.amountCents) }}</strong
-            ><small
-              >{{ Math.round((c.amountCents / s.totalCents) * 100) }}%</small
-            >
+            ><small>{{ Math.round((c.amountCents / s.totalCents) * 100) }}%</small>
           </div>
           <p v-if="!s.byCategory.length" class="muted">
             记下第一笔后，这里会展示费用分布。
@@ -155,13 +128,10 @@ const gradient = computed(() => {
       <h2>预算分配与材料计划</h2>
       <div class="allocation-grid">
         <div>
-          <span>阶段预算已分配</span
-          ><strong>{{ money(s.allocatedCents) }}</strong>
+          <span>阶段预算已分配</span><strong>{{ money(s.allocatedCents) }}</strong>
         </div>
         <div>
-          <span>{{
-            s.allocatedCents > s.budgetCents ? "超分配金额" : "未分配预算"
-          }}</span
+          <span>{{ s.allocatedCents > s.budgetCents ? "超分配金额" : "未分配预算" }}</span
           ><strong :class="{ danger: s.allocatedCents > s.budgetCents }">{{
             money(Math.abs(s.budgetCents - s.allocatedCents))
           }}</strong>

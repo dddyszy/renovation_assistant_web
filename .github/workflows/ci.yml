@@ -28,8 +28,7 @@ jobs:
           node-version: 24
           cache: npm
       - run: npm ci
-      - run: npm run build
-      - run: npm test
+      - run: npm run check
       - name: Prepare disposable migration target
         run: node --input-type=module -e "import pg from 'pg'; const pool=new pg.Pool({connectionString:process.env.TEST_DATABASE_URL}); try { await pool.query('CREATE DATABASE zhu_jia_migration') } finally { await pool.end() }"
         env:
@@ -45,7 +44,7 @@ jobs:
       matrix:
         storage: [embedded, postgres, postgres17]
     env:
-      APP_ORIGIN: https://renovation.example.test
+      APP_ORIGIN: http://renovation.example.test
       POSTGRES_HOST: external.example.test
       POSTGRES_PASSWORD: "ci:test@password/with%characters#"
     steps:
@@ -60,7 +59,6 @@ jobs:
           docker compose -f compose.yaml -f compose.postgres.yaml config --quiet
           docker compose -f compose.yaml -f compose.postgres17.yaml config --quiet
           DATA_DIR=/tmp/zhu-jia docker compose -f compose.yaml -f compose.bind.yaml config --quiet
-          DOMAIN=renovation.example.test docker compose -f compose.yaml -f compose.https.yaml config --quiet
       - name: Build and start
         run: |
           files=(-f compose.yaml)
@@ -72,7 +70,24 @@ jobs:
       - run: node scripts/docker-smoke.mjs
         env:
           SMOKE_ALLOW_WRITE: "yes"
-          SMOKE_ORIGIN: https://renovation.example.test
+          SMOKE_ORIGIN: http://renovation.example.test
+      - name: Verify the host Nginx reverse proxy example
+        if: matrix.storage == 'embedded'
+        run: |
+          docker run --rm --network host -v "$PWD/deploy/nginx.conf:/etc/nginx/conf.d/default.conf:ro" nginx:stable-alpine nginx -t
+          docker run -d --name zhu-jia-proxy --network host -v "$PWD/deploy/nginx.conf:/etc/nginx/conf.d/default.conf:ro" nginx:stable-alpine
+          for attempt in {1..30}; do
+            if curl --fail --silent http://127.0.0.1/api/v1/health > /dev/null; then break; fi
+            sleep 1
+          done
+          node scripts/docker-smoke.mjs
+        env:
+          SMOKE_ALLOW_WRITE: "yes"
+          SMOKE_ORIGIN: http://renovation.example.test
+          SMOKE_URL: http://127.0.0.1
+      - name: Remove the disposable proxy
+        if: always() && matrix.storage == 'embedded'
+        run: docker rm -f zhu-jia-proxy || true
       - name: Show logs on failure
         if: failure()
         run: docker compose -f compose.yaml -f compose.postgres.yaml -f compose.postgres17.yaml logs --tail 100

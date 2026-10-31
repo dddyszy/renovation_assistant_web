@@ -1,10 +1,11 @@
 <script setup lang="ts">
+import type { Role } from "../../shared/api";
 import { computed, ref } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { useQuery } from "@tanstack/vue-query";
 import { Users, ArrowRight } from "@lucide/vue";
-import { request } from "../api";
-import { useWorkspace } from "../workspace";
+import { request, errorMessage } from "../services/api";
+import { useWorkspace } from "../stores/workspace";
 import { roles } from "../../shared/domain";
 import QueryState from "../components/QueryState.vue";
 const route = useRoute(),
@@ -14,12 +15,15 @@ const route = useRoute(),
   error = ref("");
 const query = useQuery({
   queryKey: computed(() => ["invite", route.params.token]),
-  queryFn: () => request(`/invitations/${route.params.token}/preview`),
+  queryFn: () =>
+    request<{ familyName: string; role: Role; expiresAt: string }>(
+      `/invitations/${route.params.token}/preview`,
+    ),
 });
 async function accept() {
   busy.value = true;
   try {
-    const { data } = await request(
+    const { data } = await request<{ familyId: string }>(
       `/invitations/${route.params.token}/accept`,
       "POST",
     );
@@ -28,8 +32,8 @@ async function accept() {
     await w.loadProjects();
     w.notify("已加入家庭，欢迎一起筑家");
     await router.replace("/");
-  } catch (e: any) {
-    error.value = e.message;
+  } catch (e) {
+    error.value = errorMessage(e);
   } finally {
     busy.value = false;
   }
@@ -50,15 +54,12 @@ async function accept() {
         加入后，你将成为「{{
           roles[query.data.value.data.role]
         }}」，<br />可以查看家庭内全部装修项目{{
-          query.data.value.data.role === "viewer"
-            ? "。"
-            : "，按角色共同维护装修记录。"
+          query.data.value.data.role === "viewer" ? "。" : "，按角色共同维护装修记录。"
         }}
       </p>
       <div v-if="error" class="error-box">{{ error }}</div>
       <button class="btn primary" :disabled="busy" @click="accept">
-        {{ busy ? "加入中…" : "确认加入这个家庭"
-        }}<ArrowRight :size="17" /></button
+        {{ busy ? "加入中…" : "确认加入这个家庭" }}<ArrowRight :size="17" /></button
     ></template>
   </div>
 </template>

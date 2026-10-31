@@ -1,17 +1,11 @@
 <script setup lang="ts">
+import type { User } from "../../shared/api";
 import { ref } from "vue";
 import { useRouter } from "vue-router";
 import { useQueryClient } from "@tanstack/vue-query";
-import {
-  Plus,
-  Users,
-  Layers,
-  LogOut,
-  ArrowUpRight,
-  ShieldCheck,
-} from "@lucide/vue";
-import { useWorkspace } from "../workspace";
-import { request } from "../api";
+import { Plus, Users, Layers, LogOut, ArrowUpRight, ShieldCheck } from "@lucide/vue";
+import { useWorkspace } from "../stores/workspace";
+import { request, errorMessage } from "../services/api";
 import { roles } from "../../shared/domain";
 import { APP_VERSION } from "../../shared/version";
 const w = useWorkspace(),
@@ -23,13 +17,13 @@ const w = useWorkspace(),
 async function save() {
   busy.value = true;
   try {
-    const { data } = await request("/me", "PATCH", {
+    const { data } = await request<User>("/me", "PATCH", {
       nickname: nickname.value,
     });
     w.user = data;
     w.notify("称呼已更新");
-  } catch (e: any) {
-    error.value = e.message;
+  } catch (e) {
+    error.value = errorMessage(e);
   } finally {
     busy.value = false;
   }
@@ -44,8 +38,8 @@ async function logout() {
     w.clear();
     client.clear();
     await router.replace("/login");
-  } catch (e: any) {
-    error.value = e.message;
+  } catch (e) {
+    error.value = errorMessage(e);
   } finally {
     busy.value = false;
   }
@@ -86,9 +80,7 @@ async function switchFamily(fid: string) {
         <button class="btn primary" :disabled="busy">保存称呼</button>
       </form>
       <div class="security-note">
-        <ShieldCheck :size="18" /><span
-          >密码经过加密存储 · 家庭数据按权限共享</span
-        >
+        <ShieldCheck :size="18" /><span>密码经过加密存储 · 家庭数据按权限共享</span>
       </div>
       <RouterLink to="/reset-password" class="text-btn"
         >重置登录密码 <ArrowUpRight :size="15"
@@ -108,11 +100,7 @@ async function switchFamily(fid: string) {
             <strong>{{ f.name }}</strong
             ><small>{{ roles[f.role] }} · {{ f.memberCount }} 位家人</small>
           </div>
-          <button
-            class="text-btn"
-            :disabled="w.fid === f.id"
-            @click="switchFamily(f.id)"
-          >
+          <button class="text-btn" :disabled="w.fid === f.id" @click="switchFamily(f.id)">
             {{ w.fid === f.id ? "当前家庭" : "切换" }}
           </button>
         </div>
@@ -125,11 +113,7 @@ async function switchFamily(fid: string) {
         <p class="muted small-text">
           {{ w.projects.length }} 个项目 · {{ w.family?.name }}
         </p>
-        <button
-          v-if="w.isAdmin"
-          class="btn secondary"
-          @click="w.open('projects')"
-        >
+        <button v-if="w.isAdmin" class="btn secondary" @click="w.open('projects')">
           <Layers :size="17" />切换与管理项目
         </button>
         <div v-else class="field">

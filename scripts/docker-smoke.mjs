@@ -9,7 +9,7 @@ if (
   throw new Error(
     "该脚本会创建临时验收数据，仅在本机测试端口设置 SMOKE_ALLOW_WRITE=yes 后运行",
   );
-const origin = process.env.SMOKE_ORIGIN || "https://renovation.example.test";
+const origin = process.env.SMOKE_ORIGIN || "http://renovation.example.test";
 const metadata = JSON.parse(
   await readFile(new URL("../package.json", import.meta.url), "utf8"),
 );
@@ -35,10 +35,7 @@ async function api(path, method = "GET", body) {
 }
 try {
   const health = await api("/health");
-  assert.equal(
-    health.version,
-    process.env.SMOKE_EXPECTED_VERSION || metadata.version,
-  );
+  assert.equal(health.version, process.env.SMOKE_EXPECTED_VERSION || metadata.version);
   const email = `docker-${randomUUID()}@example.test`;
   await api("/auth/register", "POST", {
     email,

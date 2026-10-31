@@ -5,10 +5,7 @@ const metadata = JSON.parse(
   await readFile(new URL("../package.json", import.meta.url), "utf8"),
 );
 const worker = await readFile("dist/sw.js", "utf8");
-await writeFile(
-  "dist/sw.js",
-  worker.replaceAll("__APP_VERSION__", metadata.version),
-);
+await writeFile("dist/sw.js", worker.replaceAll("__APP_VERSION__", metadata.version));
 async function compress(directory) {
   for (const entry of await readdir(directory, { withFileTypes: true })) {
     const path = join(directory, entry.name);
