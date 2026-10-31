@@ -26,14 +26,22 @@ export function registerNotesRoutes(app: FastifyInstance, context: RequestContex
         ? current.columns.findIndex((column) => column.id === query.columnId)
         : -1;
       if (query.columnId && index < 0) fail(404, "NOT_FOUND", "专栏不存在");
-      return data(
-        createNotesArchive(
-          "web",
-          r.project.name,
-          query.columnId ? [current.portable[index]!] : current.portable,
-          APP_VERSION,
-        ),
-      );
+      try {
+        return data(
+          createNotesArchive(
+            "web",
+            r.project.name,
+            query.columnId ? [current.portable[index]!] : current.portable,
+            APP_VERSION,
+          ),
+        );
+      } catch (error) {
+        fail(
+          422,
+          "INVALID_NOTES_EXPORT",
+          error instanceof Error ? error.message : "备忘无法导出",
+        );
+      }
     });
   });
   app.post(
