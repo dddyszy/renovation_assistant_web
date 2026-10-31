@@ -1,6 +1,6 @@
 # 配置参考
 
-版本：0.9.5。本地开发参考 `.env.example`，Docker 参考 `.env.docker.example`。示例文件可提交，真实凭据文件不提交。
+版本：0.9.6。本地开发参考 `.env.example`，Docker 参考 `.env.docker.example`。示例文件可提交，真实凭据文件不提交。
 
 首次部署可直接按 [Docker 参数填写指南](docker-parameters.md) 选择场景填写；下文为全部变量的技术参考。
 
@@ -40,7 +40,7 @@ Compose 默认固定内置目录 `/app/data/postgres`；两个 PostgreSQL 配置
 | ----------------------------- | ------------------------------------------ | ---------------------------------------------- |
 | APP_ORIGIN                    | 必填，无 Compose 回退值                    | 用户浏览器的真实入口来源，不带路径和结尾斜线   |
 | APP_IMAGE                     | `ghcr.io/dddyszy/renovation_assistant_web` | compose.image.yaml 使用的镜像名，不带版本标签  |
-| APP_IMAGE_TAG                 | `0.9.5`                                    | 本地构建镜像标签和 OCI 版本标记                |
+| APP_IMAGE_TAG                 | `0.9.6`                                    | 本地构建镜像标签和 OCI 版本标记                |
 | APP_PORT                      | `8080`                                     | 宿主机回环端口，容器端口仍为 3001              |
 | DATA_DIR                      | 无                                         | 可选目录挂载的绝对路径                         |
 | POSTGRES_HOST / POSTGRES_PORT | 无 / 5432                                  | 外置数据库服务器                               |

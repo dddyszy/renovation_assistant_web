@@ -1,6 +1,6 @@
 # 筑家手记运行部署与验收说明
 
-当前版本：0.9.5。Docker 与内置/外置模式详见 [Docker 部署](docker.md)，文档总入口见 [文档导航](README.md)。
+当前版本：0.9.6。Docker 与内置/外置模式详见 [Docker 部署](docker.md)，文档总入口见 [文档导航](README.md)。
 
 ## 开发环境
 

@@ -1,14 +1,94 @@
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
+import {
+  createNotesArchive,
+  NOTES_FILE_LIMIT,
+  NotesCapacityError,
+  parseNotesArchive,
+} from "../../shared/notes-transfer.ts";
+import { APP_VERSION } from "../../shared/version.ts";
 import type { RequestContext } from "../context.ts";
 import { fail } from "../lib/errors.ts";
 import { data, param, scope } from "../lib/http.ts";
 import { actorFields, audit, id, insert, sqlData, update } from "../lib/persistence.ts";
 import { checkLinks, resource } from "../lib/resources.ts";
 import { noteSchema, required, version } from "../schemas.ts";
+import { importProjectNotes, readProjectNotes } from "../services/notes-transfer.ts";
 
 export function registerNotesRoutes(app: FastifyInstance, context: RequestContext) {
   const { db, project, allow, writeTransaction } = context;
+  app.get(`${scope}/notes/export`, { preHandler: project }, async (r) => {
+    const query = z.object({ columnId: z.string().optional() }).parse(r.query);
+    return db.transaction(async (tx) => {
+      await tx.query("SET TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY");
+      const current = await readProjectNotes(tx, r.familyId, r.project.id);
+      const index = query.columnId
+        ? current.columns.findIndex((column) => column.id === query.columnId)
+        : -1;
+      if (query.columnId && index < 0) fail(404, "NOT_FOUND", "专栏不存在");
+      try {
+        return data(
+          createNotesArchive(
+            "web",
+            r.project.name,
+            query.columnId ? [current.portable[index]!] : current.portable,
+            APP_VERSION,
+          ),
+        );
+      } catch (error) {
+        fail(
+          422,
+          "INVALID_NOTES_EXPORT",
+          error instanceof Error ? error.message : "备忘无法导出",
+        );
+      }
+    });
+  });
+  app.post(
+    `${scope}/notes/import-file`,
+    { preHandler: project, bodyLimit: NOTES_FILE_LIMIT },
+    async (r) => {
+      allow(r);
+      let archive;
+      try {
+        archive = parseNotesArchive(r.body);
+      } catch (error) {
+        fail(
+          422,
+          "INVALID_NOTES_FILE",
+          error instanceof Error ? error.message : "备忘文件格式不正确",
+        );
+      }
+      return data(
+        await writeTransaction(r, async (tx) => {
+          let result;
+          try {
+            result = await importProjectNotes(
+              tx,
+              archive!,
+              r.familyId,
+              r.project.id,
+              r.user.id,
+            );
+          } catch (error) {
+            // Capacity errors are user input errors; preserve database failures for the common handler.
+            if (error instanceof NotesCapacityError) fail(422, "LIMIT", error.message);
+            throw error;
+          }
+          if (result.added || result.createdColumns)
+            await audit(
+              tx,
+              r,
+              "导入备忘文件",
+              "notes",
+              r.project.id,
+              `新增 ${result.added} 条，跳过 ${result.skipped} 条`,
+            );
+          return result;
+        }),
+      );
+    },
+  );
   app.get(`${scope}/note-columns`, { preHandler: project }, async (r) =>
     data(
       await db.query(

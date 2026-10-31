@@ -1,6 +1,6 @@
 # Docker 部署参数填写指南
 
-适用版本：0.9.5。先选择存储方式，再按对应部分填写 `.env.docker`。不需要把所有参数都填满。
+适用版本：0.9.6。先选择存储方式，再按对应部分填写 `.env.docker`。不需要把所有参数都填满。
 
 ```bash
 cp .env.docker.example .env.docker
@@ -27,7 +27,7 @@ cp .env.docker.example .env.docker
 | ------------- | ----------------------------- | -------------------------------------------------------------------------------- | ------------------------------------------ |
 | APP_ORIGIN    | 必填                          | 用户浏览器实际访问的来源，只含协议、域名和可选端口；不含路径、查询参数、结尾斜线 | `http://home.example.com`                  |
 | APP_IMAGE     | 使用 GHCR 时保留默认即可      | 镜像名称，不包含 `:版本号`；仅 compose.image.yaml 使用                           | `ghcr.io/dddyszy/renovation_assistant_web` |
-| APP_IMAGE_TAG | 可不改                        | 已发布的镜像版本，不带 v；当前没有 latest 标签                                   | `0.9.5`                                    |
+| APP_IMAGE_TAG | 可不改                        | 已发布的镜像版本，不带 v；当前没有 latest 标签                                   | `0.9.6`                                    |
 | APP_PORT      | 可不改                        | 宿主机回环端口，需未被占用，范围 1–65535                                         | `8080`                                     |
 | DATA_DIR      | 使用 compose.bind.yaml 时必填 | 宿主机专用数据目录的绝对路径                                                     | `/srv/zhu-jia/data`                        |
 
@@ -73,7 +73,7 @@ Compose 将密码单独传给 PGPASSWORD，不必把特殊字符编码成 URL。
 
 不需要邮件功能时保持 SMTP_HOST、SMTP_USER、SMTP_PASSWORD、SMTP_FROM 为空，SMTP_PORT 保留 587 即可。生产环境会明确提示邮件找回暂不可用，不会影响普通登录。
 
-已发布的旧 0.9.5 镜像尚未包含本次 HTTP 入口改动，下面的拉取命令用于对应的新镜像发布后。需要立即使用 HTTP 入口时，移除 `-f compose.image.yaml`，并把 `--no-build` 换成 `--build`，从当前源码构建。
+0.9.6 镜像发布前，移除下列命令的 `-f compose.image.yaml`，把 `--no-build` 换为 `--build`，从当前源码构建。
 
 ## 示例一：内置存储，服务器已有反代
 
@@ -81,7 +81,7 @@ Compose 将密码单独传给 PGPASSWORD，不必把特殊字符编码成 URL。
 
 ```dotenv
 APP_IMAGE=ghcr.io/dddyszy/renovation_assistant_web
-APP_IMAGE_TAG=0.9.5
+APP_IMAGE_TAG=0.9.6
 APP_ORIGIN=http://home.example.com
 APP_PORT=8080
 ```

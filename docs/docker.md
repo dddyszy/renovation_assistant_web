@@ -1,6 +1,6 @@
 # Docker 部署
 
-版本：0.9.5。应用镜像默认名称为 `zhu-jia-web:0.9.5`。使用 Docker Engine 或 Docker Desktop，Docker Compose **2.24.4 及以上**；配置中使用 `!reset`、`!override` 合并存储模式。
+版本：0.9.6。应用镜像默认名称为 `zhu-jia-web:0.9.6`。使用 Docker Engine 或 Docker Desktop，Docker Compose **2.24.4 及以上**；配置中使用 `!reset`、`!override` 合并存储模式。
 
 需要直接使用 GHCR 预构建镜像时，再加 `-f compose.image.yaml` 并使用 `--no-build`；私有镜像登录及完整命令见 [镜像仓库说明](container-registry.md)。以下默认命令用于从源码构建，两种部署方式共用存储配置。
 
@@ -30,7 +30,7 @@ cp .env.docker.example .env.docker
 修改 `.env.docker`：
 
 ```dotenv
-APP_IMAGE_TAG=0.9.5
+APP_IMAGE_TAG=0.9.6
 APP_ORIGIN=http://home.example.com
 APP_PORT=8080
 ```
@@ -72,7 +72,7 @@ server {
 
 应用部署在站点根路径，例如 `http://home.example.com`；暂不支持 `/renovation/` 之类的子路径部署。服务器上可直接用 `curl --fail http://127.0.0.1:8080/api/v1/health` 检查应用，再从配置的域名测试注册和登录。
 
-本次 HTTP 入口调整需要用当前源码重新构建镜像。已发布的旧 0.9.5 镜像尚未包含该改动；新镜像发布前使用上述 `--build` 命令。
+0.9.6 开发版需从当前源码构建；预构建镜像是否可用以发布流程为准。
 
 ## 外置数据库模式
 
@@ -130,7 +130,7 @@ docker compose --env-file .env.docker -f compose.yaml -f compose.bind.yaml up -d
 ## 单独构建镜像
 
 ```bash
-docker build --build-arg APP_VERSION=0.9.5 -t zhu-jia-web:0.9.5 .
+docker build --build-arg APP_VERSION=0.9.6 -t zhu-jia-web:0.9.6 .
 ```
 
 多阶段构建先做类型检查、前端构建和自动测试，再生成运行镜像。运行层使用 Node.js 24、生产依赖和非 root 用户，应用以前台 Node 进程运行，接收终止信号后关闭 API 和数据库。
@@ -144,6 +144,6 @@ docker compose --env-file .env.docker -f compose.yaml ps
 curl --fail http://127.0.0.1:8080/api/v1/health
 ```
 
-健康接口同时查询数据库并返回版本，期望 `data.status=ok`、`data.version=0.9.5`。启动失败时用相同配置组合查看 `logs --tail 100 app`，外置模式优先检查数据库地址、账号、TLS 和网络。
+健康接口同时查询数据库并返回版本，期望 `data.status=ok`、`data.version=0.9.6`。启动失败时用相同配置组合查看 `logs --tail 100 app`，外置模式优先检查数据库地址、账号、TLS 和网络。
 
 CI 配置在 `.github/workflows/ci.yml`，包含内置与 PostgreSQL 容器的构建和 HTTP 验收。本机如果没有 Docker 引擎，只能完成配置检查和非容器测试；容器是否真正启动必须以 Docker 运行结果为准。

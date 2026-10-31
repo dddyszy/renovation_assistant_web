@@ -1,6 +1,6 @@
 # API 参考
 
-版本：0.9.5，前缀 `/api/v1`。以下为当前实现摘要，字段约束以 `server/schemas.ts`、`server/routes/` 和 `server/schema.sql` 为准。
+版本：0.9.6，前缀 `/api/v1`。以下为当前实现摘要，字段约束以 `server/schemas.ts`、`server/routes/` 和 `server/schema.sql` 为准。
 
 ## 通用约定
 
@@ -92,3 +92,7 @@
 - 备忘：columnId、status、starred=true。
 
 幂等重试必须复用原 requestId 和原请求内容。409 版本冲突时先读取最新记录，不能仅把 version 加一后覆盖家人的修改。
+
+## 备忘文件交换（0.9.6）
+
+`GET P/notes/export?columnId=...` 导出当前专栏，省略 columnId 导出整个项目；返回共用 JSON v1 归档。`POST P/notes/import-file` 接收该归档，返回新增、跳过与新建专栏数量，整体事务且保持原有项目写权限。文件最多 2 MiB，详见 [协议与错误约束](notes-transfer.md)。
