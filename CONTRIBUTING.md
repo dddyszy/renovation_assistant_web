@@ -85,3 +85,7 @@ tests/                隔离测试，不访问开发或正式数据库
 提交前运行 `npm run check`；PR 说明改动原因、最终行为、验证结果和未覆盖的环境。接口或配置改动同步文档；依赖变动同步锁文件。不要把 `.env`、`.data`、`dist`、截图或备份纳入提交。
 
 0.9.5 已发布的 tag 和镜像保持原样，源代码重构不自动改写它们。新的正式发布按 [发布流程](docs/releasing.md) 更新版本和重新验收。
+
+## 跨端备忘协议
+
+修改 `shared/notes-transfer.ts` 后，用 `scripts/sync-notes-transfer.mjs --target <小程序仓库>` 同步生成实现，并运行 `--check` 验证一致。小程序的客户端、云函数与协议源镜像必须一起提交，不能手工修补生成文件；操作与发布规则见 [备忘文件交换](docs/notes-transfer.md)。

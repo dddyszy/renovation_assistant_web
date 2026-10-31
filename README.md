@@ -1,6 +1,6 @@
 # 筑家手记 Web
 
-当前版本：**0.9.5** · [文档导航](docs/README.md) · [更新记录](CHANGELOG.md) · [版本路线图](docs/roadmap.md)
+当前版本：**0.9.6** · [文档导航](docs/README.md) · [更新记录](CHANGELOG.md) · [版本路线图](docs/roadmap.md)
 
 面向家庭协作的装修管理应用，使用 Vue 3 + TypeScript + Vite，支持电脑和手机浏览器。沿用原微信小程序的暖色家居风格，以独立账号、家庭与共享项目替代微信个人身份。
 
@@ -39,7 +39,7 @@ npm run demo
 
 ## Docker 部署与存储
 
-GHCR 已提供 `ghcr.io/dddyszy/renovation_assistant_web:0.9.5`，但本次 HTTP 入口改动尚未发布到该镜像；当前请按下文从源码构建。后续镜像发布与拉取方式见 [发布与使用说明](docs/container-registry.md)。
+0.9.6 开发版请先从源码构建；新镜像以发布工作流成功为准。GHCR 发布与拉取说明见 [容器镜像仓库](docs/container-registry.md)。
 
 支持内置数据库和外置 PostgreSQL，也提供同 Compose 启动 PostgreSQL 的配置。Docker Compose 需要 2.24.4 及以上。
 
@@ -62,7 +62,7 @@ docker compose --env-file .env.docker -f compose.yaml -f compose.postgres.yaml u
 docker compose --env-file .env.docker -f compose.yaml -f compose.postgres17.yaml up -d --build --wait
 ```
 
-三种存储模式选择其一。Docker 应用只提供 HTTP，服务器现有反代转发到 `127.0.0.1:8080` 即可，完整 Nginx 示例见 [Docker 部署](docs/docker.md#启动应用与服务器反代)。本次 HTTP 入口调整需用当前源码重新构建，已发布旧镜像尚未包含该改动。
+三种存储模式选择其一。Docker 应用只提供 HTTP，服务器现有反代转发到 `127.0.0.1:8080` 即可，完整 Nginx 示例见 [Docker 部署](docs/docker.md#启动应用与服务器反代)。
 
 内置模式可以叠加 `compose.bind.yaml` 将数据放到宿主机指定目录；容器重建不删除持久化数据。切换数据库不会自动搬迁记录，使用带预检和核对的存储迁移工具。
 
@@ -72,6 +72,10 @@ docker compose --env-file .env.docker -f compose.yaml -f compose.postgres17.yaml
 - [配置参考](docs/configuration.md)
 - [存储迁移](docs/storage-migration.md)
 - [备份、升级与故障处理](docs/operations.md)
+
+## 0.9.6 备忘导入导出
+
+Web 和小程序均可在备忘页使用“导入 / 导出”。支持整个项目或当前专栏 JSON 导出，文件导入先预览，再按专栏合并、追加并跳过重复内容；标题、描述、重点、状态和空专栏跨端保留。操作步骤与共用格式见 [备忘文件交换](docs/notes-transfer.md)。
 
 ## 已实现
 

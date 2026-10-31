@@ -1,11 +1,11 @@
 name: zhu-jia-web
 services:
   app:
-    image: zhu-jia-web:${APP_IMAGE_TAG:-0.9.5}
+    image: zhu-jia-web:${APP_IMAGE_TAG:-0.9.6}
     build:
       context: .
       args:
-        APP_VERSION: ${APP_IMAGE_TAG:-0.9.5}
+        APP_VERSION: ${APP_IMAGE_TAG:-0.9.6}
     init: true
     restart: unless-stopped
     environment:

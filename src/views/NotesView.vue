@@ -17,6 +17,8 @@ import { useProjectQuery } from "../composables/useProjectQuery";
 import { request, errorMessage } from "../services/api";
 import QueryState from "../components/QueryState.vue";
 import EmptyState from "../components/EmptyState.vue";
+import NotesTransfer from "../components/NotesTransfer.vue";
+const transferOpen = ref(false);
 const w = useWorkspace(),
   columns = useProjectQuery("note-columns"),
   client = useQueryClient(),
@@ -103,6 +105,12 @@ function add() {
     status: "pending",
   });
 }
+watch(
+  () => [w.fid, w.pid],
+  () => {
+    transferOpen.value = false;
+  },
+);
 </script>
 <template>
   <div class="page-heading">
@@ -111,14 +119,25 @@ function add() {
       <h1>要确认的事</h1>
       <p>把想法记下来，和家人一起慢慢商量。</p>
     </div>
-    <div v-if="w.canWrite" class="inline-actions">
-      <button class="btn secondary" @click="w.open('import', { columnId })">
+    <div class="inline-actions">
+      <button class="btn secondary" @click="transferOpen = true">导入 / 导出</button>
+      <button
+        v-if="w.canWrite"
+        class="btn secondary"
+        @click="w.open('import', { columnId })"
+      >
         <ArrowDownToLine :size="17" />粘贴导入</button
-      ><button class="btn primary" :disabled="!columnId" @click="add">
+      ><button v-if="w.canWrite" class="btn primary" :disabled="!columnId" @click="add">
         <Plus :size="18" />新增需求
       </button>
     </div>
   </div>
+  <NotesTransfer
+    v-if="transferOpen"
+    :columns="columns.data.value?.data || []"
+    :current-column="columnId"
+    @close="transferOpen = false"
+  />
   <div v-if="error" class="error-box">{{ error }}</div>
   <QueryState
     :loading="columns.isPending.value"
