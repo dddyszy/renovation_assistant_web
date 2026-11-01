@@ -1,6 +1,6 @@
 # Docker 部署
 
-版本：**0.9.9**。需要 Docker Engine 与 Docker Compose 2.24.4 及以上。
+版本：**0.9.10**。需要 Docker Engine 与 Docker Compose 2.24.4 及以上。
 
 支持两种存储方式：**内置 PGlite**（默认，单容器）和**外置 PostgreSQL**（推荐 18，兼容 17）。
 
@@ -13,7 +13,7 @@ docker compose up -d --build --wait
 curl --fail http://127.0.0.1:8080/api/v1/health
 ```
 
-健康接口应返回 `data.status=ok`、`data.version=0.9.9`。Compose 自动读取 `.env`。
+健康接口应返回 `data.status=ok`、`data.version=0.9.10`。Compose 自动读取 `.env`。
 
 ## 选择存储
 
@@ -80,7 +80,7 @@ docker compose -f compose.yaml -f compose.external.yaml up -d --build --wait
 
 ```dotenv
 APP_ORIGIN=https://home.example.com
-APP_IMAGE_TAG=0.9.9
+APP_IMAGE_TAG=0.9.10
 ```
 
 ```bash
