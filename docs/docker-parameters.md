@@ -1,6 +1,6 @@
 # Docker 部署参数
 
-适用版本：**0.9.7**。先复制配置：
+适用版本：**0.9.8**。先复制配置：
 
 ```bash
 cp .env.example .env
@@ -20,8 +20,8 @@ Compose 自动读取 `.env`，不用在每次命令中添加 `--env-file`。示�
 
 ## 默认不需要配置的参数
 
-- **镜像参数**：源码构建已固定为 `zhu-jia-web:0.9.7`，不需要 APP_IMAGE 或 APP_IMAGE_TAG。
-- **运行参数**：NODE_ENV、HOST、PORT 由镜像设置；DATABASE_URL 由 Compose 设置。
+- **镜像参数**：源码构建已固定为 `zhu-jia-web:0.9.8`，不需要 APP_IMAGE 或 APP_IMAGE_TAG。
+- **运行参数**：NODE_ENV、HOST、PORT、DATABASE_URL 均由镜像提供默认值，Compose 再显式声明数据库目录。
 - **数据库参数**：内置 PGlite 不需要账号或密码。
 - **SMTP 参数**：不使用密码找回邮件时保持为空，且不要叠加 `compose.smtp.yaml`。
 - **DATA_DIR**：使用默认命名卷时不需要。

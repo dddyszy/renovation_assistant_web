@@ -1,6 +1,6 @@
 # Docker 部署
 
-版本：**0.9.7**。使用 Docker Engine 和 Docker Compose 2.24.4 及以上；可选覆盖配置使用 `!reset`。
+版本：**0.9.8**。使用 Docker Engine 和 Docker Compose 2.24.4 及以上；可选覆盖配置使用 `!reset`。
 
 ## 默认部署
 
@@ -13,7 +13,7 @@ docker compose up -d --build --wait
 curl --fail http://127.0.0.1:8080/api/v1/health
 ```
 
-健康接口应返回 `data.status=ok`、`data.version=0.9.7`。Compose 默认自动读取 `.env`，常用命令不需要 `--env-file` 或 `-f compose.yaml`。旧部署可继续显式传入原环境文件，新部署使用 `.env`。
+健康接口应返回 `data.status=ok`、`data.version=0.9.8`。Compose 默认自动读取 `.env`，常用命令不需要 `--env-file` 或 `-f compose.yaml`。旧部署可继续显式传入原环境文件，新部署使用 `.env`。
 
 Docker 自动提供 `NODE_ENV=production`、容器监听地址和端口、健康检查；默认 Compose 不再重复设置。默认也不需要数据库密码、SMTP、镜像名或版本变量。
 
@@ -27,7 +27,7 @@ Docker 自动提供 `NODE_ENV=production`、容器监听地址和端口、健康
 - `read_only`、`tmpfs`、`cap_drop`、`no-new-privileges`：保留基础容器安全限制。
 - 日志轮转：单个日志 10 MB、最多 3 个文件。
 
-`NODE_ENV/HOST/PORT/TSX_DISABLE_CACHE` 已在 Dockerfile 设置，无需写入 `.env`。不要删除数据卷或健康检查来换取更少配置行。
+`NODE_ENV/HOST/PORT/TSX_DISABLE_CACHE` 已在 Dockerfile 设置，无需写入 `.env`。镜像还内置 `DATABASE_URL=/app/data/postgres`，因此直接用 `docker run` 并挂载 `/app/data` 也能启动；PostgreSQL 覆盖配置会用空值清除它并改用 `PG*`。不要删除数据卷或健康检查来换取更少配置行。
 
 ## 服务器反向代理
 
@@ -116,14 +116,14 @@ docker compose -f compose.yaml -f compose.image.yaml pull
 docker compose -f compose.yaml -f compose.image.yaml up -d --no-build --wait
 ```
 
-默认地址为 `ghcr.io/dddyszy/renovation_assistant_web:0.9.7`。需要其他仓库或候选镜像时，才在 `.env` 设置 `APP_IMAGE` 和 `APP_IMAGE_TAG`。私有镜像登录见 [容器镜像仓库](container-registry.md)。
+默认地址为 `ghcr.io/dddyszy/renovation_assistant_web:0.9.8`。需要其他仓库或候选镜像时，才在 `.env` 设置 `APP_IMAGE` 和 `APP_IMAGE_TAG`。私有镜像登录见 [容器镜像仓库](container-registry.md)。
 
 ## 构建、升级与验收
 
 单独构建：
 
 ```bash
-docker build -t zhu-jia-web:0.9.7 .
+docker build -t zhu-jia-web:0.9.8 .
 ```
 
 Dockerfile 内执行 lint、格式检查、类型检查、前端构建和测试；运行层只保留生产依赖，使用非 root 用户。升级使用原存储配置重新 `up -d --build --wait`，不要使用 `down -v`。
