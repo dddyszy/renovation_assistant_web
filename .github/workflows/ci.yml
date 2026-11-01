@@ -42,36 +42,52 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        storage: [embedded, postgres, postgres17]
+        include:
+          - storage: embedded
+            postgres: 18
+          - storage: external
+            postgres: 18
+          - storage: external
+            postgres: 17
+    services:
+      postgres:
+        image: postgres:${{ matrix.postgres }}-alpine
+        env:
+          POSTGRES_DB: zhu_jia_ci
+          POSTGRES_USER: zhu_jia
+          POSTGRES_PASSWORD: ci-test-password
+        ports: ["5432:5432"]
+        options: --health-cmd "pg_isready -U zhu_jia -d zhu_jia_ci" --health-interval 5s --health-timeout 5s --health-retries 20
     env:
       APP_ORIGIN: http://renovation.example.test
-      POSTGRES_PASSWORD: "ci:test@password/with%characters#"
-      DATABASE_URL: postgresql://zhu_jia:ci%3Atest%40password@external.example.test:5432/zhu_jia?sslmode=disable
+      DATABASE_URL: postgresql://zhu_jia:ci-test-password@host.docker.internal:5432/zhu_jia_ci?sslmode=disable
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 24
-      - name: Validate all Compose storage modes
+      - name: Validate Compose modes
         run: |
           docker compose -f compose.yaml config --quiet
           docker compose -f compose.yaml -f compose.external.yaml config --quiet
-          docker compose -f compose.yaml -f compose.postgres.yaml config --quiet
-          docker compose -f compose.yaml -f compose.postgres17.yaml config --quiet
           DATA_DIR=/tmp/zhu-jia docker compose -f compose.yaml -f compose.bind.yaml config --quiet
           docker compose -f compose.yaml -f compose.image.yaml config --quiet
       - name: Build and start
         run: |
           files=(-f compose.yaml)
-          case '${{ matrix.storage }}' in
-            postgres) files+=(-f compose.postgres.yaml) ;;
-            postgres17) files+=(-f compose.postgres17.yaml) ;;
-          esac
+          if [ '${{ matrix.storage }}' = external ]; then files+=(-f compose.external.yaml); fi
           docker compose "${files[@]}" up -d --build --wait --wait-timeout 180
+      - name: Verify PostgreSQL major version
+        if: matrix.storage == 'external'
+        run: |
+          version=$(PGPASSWORD=ci-test-password psql -h 127.0.0.1 -p 5432 -U zhu_jia -d zhu_jia_ci -Atc "SHOW server_version_num")
+          test "$((version / 10000))" -eq "${{ matrix.postgres }}"
       - name: Verify image version and runtime user
         run: |
           test "$(docker image inspect zhu-jia-web:0.9.9 --format '{{ index .Config.Labels "org.opencontainers.image.version" }}')" = 0.9.9
-          test "$(docker compose exec -T app id -u)" = 1000
+          files=(-f compose.yaml)
+          if [ '${{ matrix.storage }}' = external ]; then files+=(-f compose.external.yaml); fi
+          test "$(docker compose "${files[@]}" exec -T app id -u)" = 1000
       - name: Verify image defaults without DATABASE_URL
         if: matrix.storage == 'embedded'
         run: |
@@ -110,7 +126,13 @@ jobs:
         run: docker rm -f zhu-jia-proxy || true
       - name: Show logs on failure
         if: failure()
-        run: docker compose -f compose.yaml -f compose.postgres.yaml -f compose.postgres17.yaml logs --tail 100
+        run: |
+          files=(-f compose.yaml)
+          if [ '${{ matrix.storage }}' = external ]; then files+=(-f compose.external.yaml); fi
+          docker compose "${files[@]}" logs --tail 100
       - name: Remove disposable CI containers and volumes
         if: always()
-        run: docker compose -f compose.yaml -f compose.postgres.yaml -f compose.postgres17.yaml down -v --remove-orphans
+        run: |
+          files=(-f compose.yaml)
+          if [ '${{ matrix.storage }}' = external ]; then files+=(-f compose.external.yaml); fi
+          docker compose "${files[@]}" down -v --remove-orphans

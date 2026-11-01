@@ -1,100 +1,98 @@
-# PostgreSQL 18 默认部署与 17 兼容
+# 外置 PostgreSQL
 
-适用应用版本：0.9.9。PostgreSQL 部署默认使用 **18**，保留 **17** 兼容配置；外部数据库可以连接 18 或 17，使用相同的账号、项目和记账功能。
+应用只负责连接，不安装、不升级数据库。**推荐 PostgreSQL 18，兼容 17**，云数据库和自建实例都可以。
 
-内置 PGlite 仍作为轻量存储选项保留。推荐使用完整 PostgreSQL 时，选择下文默认 18 命令；PGlite 不会因为填写数据库密码就自动变成 PostgreSQL 18。
+## 准备数据库
 
-## 推荐：直接使用 PostgreSQL 18
+创建专用账号和库：
 
-复制最新部署配置，填写 `.env` 中的 APP_ORIGIN、数据库密码。0.9.9 开发版请从源码构建；镜像标签以发布流程成功结果为准。
-
-```bash
-docker compose \
-  -f compose.yaml -f compose.postgres.yaml \
-  up -d --build --wait
+```sql
+CREATE ROLE zhu_jia LOGIN PASSWORD '替换为强密码';
+CREATE DATABASE zhu_jia OWNER zhu_jia;
 ```
 
-应用从当前源码构建，数据库使用 `postgres:18-alpine`。包含本次改动的新应用镜像发布后，也可以加 `-f compose.image.yaml` 并改用 `--no-build`。完整填写规则见 [Docker 部署](docker.md)。
+账号需要能建表、建索引和读写业务数据。应用启动时会自动执行幂等的建表语句。
 
-## 兼容 PostgreSQL 17
+数据库在宿主机时，需要允许容器访问：
 
-已有 17 数据或需要继续运行 17 时，把默认数据库配置换成兼容配置，其他参数不变：
+```conf
+# postgresql.conf
+listen_addresses = '*'
+port = 5432
 
-```bash
-docker compose \
-  -f compose.yaml -f compose.postgres17.yaml \
-  up -d --build --wait
+# pg_hba.conf，Docker 默认网段
+host all all 172.16.0.0/12 scram-sha-256
 ```
 
-数据库使用 `postgres:17-alpine`，兼容配置继续使用旧的 `zhu-jia-web_postgres_data` 卷。更新项目部署文件后，原 17 部署应选择这个配置，不能继续假定 compose.postgres.yaml 仍代表 17。
+改完重启 PostgreSQL，并确认防火墙放行。
 
-这两个数据库配置选一个，不同时叠加。
+## 配置并启动
 
-## 外部数据库
+`.env` 只需要一条连接串：
 
-如果 PostgreSQL 18 或 17 已由云平台、宿主机或其他 Compose 项目管理，仍然使用外置配置：
-
-```bash
-docker compose \
-  -f compose.yaml -f compose.external.yaml \
-  up -d --build --wait
+```dotenv
+APP_ORIGIN=https://home.example.com
+DATABASE_URL=postgresql://zhu_jia:密码@db.example.internal:5432/zhu_jia?sslmode=verify-full
 ```
 
-只需在 `.env` 设置一条 `DATABASE_URL`，例如 `postgresql://zhu_jia:密码@db.example.internal:5432/zhu_jia?sslmode=verify-full`。不需要设置数据库版本变量，版本由外部服务器决定；应用不会替外部服务器升级数据库。
-
-## 18 与 17 的目录和卷不同
-
-| 配置                         | 数据库镜像         | 数据目录 PGDATA                 | 挂载目标                   | 命名卷                        |
-| ---------------------------- | ------------------ | ------------------------------- | -------------------------- | ----------------------------- |
-| compose.postgres.yaml 默认   | postgres:18-alpine | `/var/lib/postgresql/18/docker` | `/var/lib/postgresql`      | `zhu-jia-web_postgres18_data` |
-| compose.postgres17.yaml 兼容 | postgres:17-alpine | `/var/lib/postgresql/data`      | `/var/lib/postgresql/data` | `zhu-jia-web_postgres_data`   |
-
-PostgreSQL 官方镜像从 18 起使用按主版本分目录的数据布局，详见 [官方 PGDATA 说明](https://github.com/docker-library/docs/blob/master/postgres/README.md#pgdata)。本项目用独立卷保存新 18 数据，不让新引擎直接打开原 17 文件。
-
-首次启动 18 卷会创建空数据库。看到空库不表示旧 17 卷已经删除，不要删除旧卷或继续在两个库中分别录入数据。
-
-## 从已有 17 升级到 18
-
-更改镜像标签、改文件夹名字或移动数据目录，都不能替代数据库大版本升级。推荐采用逻辑备份和恢复：
-
-1. 使用 17 兼容配置继续运行旧库，记录项目、已付、待付和备忘数量。
-2. 停止应用写入，在旧库执行 pg_dump，保存完整备份；备份脚本命令为 `sh scripts/backup-postgres.sh .env 17`。
-3. 停止旧数据库容器，保留旧卷。启动默认 18 数据库服务，使用新的 18 卷。
-4. 在应用首次连接 18 之前，把备份恢复进新 18 数据库；使用 18 的 pg_restore 客户端。
-5. 启动应用，重新登录，核对金额、关联、成员和软删除，再开放正常使用。
-
-可用以下命令只启动 18 数据库，暂不启动应用：
-
 ```bash
-docker compose \
-  -f compose.yaml -f compose.postgres.yaml \
-  up -d --wait db
+docker compose -f compose.yaml -f compose.external.yaml up -d --build --wait
+curl --fail http://127.0.0.1:8080/api/v1/health
 ```
 
-若 18 已经有应用初始化的表，不直接向其中恢复整库备份。应新建空数据库恢复，或者使用 [存储迁移工具](storage-migration.md) 迁移到全新目标。该工具支持 PostgreSQL URL 与 PG 环境变量，但不合并非空数据库；账号和业务数据保留，现有登录会话需重新建立。
+本机数据库示例：
 
-回退时停止新环境并切回 17 配置和旧卷。新环境已有新增记录后，先保全并处理增量，不能直接丢弃。具体备份、恢复步骤见 [运维手册](operations.md)。
+```dotenv
+DATABASE_URL=postgresql://zhu_jia:密码@host.docker.internal:5433/zhu_jia?sslmode=disable
+```
 
-## 备份与验证
+密码含 `@`、`:`、`/`、`%`、`#` 时必须 URL 编码，例如 `@` 写成 `%40`。容器里的 `127.0.0.1` 指容器自身，访问宿主机要用 `host.docker.internal`。
 
-默认 18 备份：
+## SSL 模式
+
+`pg` 驱动把 `sslmode=prefer` 当作 `verify-full` 处理，不会自动回退。
+
+| 数据库情况           | 写法                  |
+| -------------------- | --------------------- |
+| 本机或内网未启用 SSL | `sslmode=disable`     |
+| 云数据库，证书受信任 | `sslmode=verify-full` |
+| 自签证书，只需要加密 | `sslmode=require`     |
+
+容器里若残留 `PGSSLMODE=prefer`，即使连接串没写 `sslmode` 也会尝试 SSL。用下面命令排查：
+
+```bash
+docker compose -f compose.yaml -f compose.external.yaml exec app printenv PGSSLMODE
+```
+
+## 版本与升级
+
+- 应用不区分 18 或 17，连接串相同；CI 分别用 PostgreSQL 18 和 17 验证接口。
+- 大版本升级由数据库侧完成，推荐逻辑备份 + 恢复，不要直接替换数据目录。
+- 应用没有内置 schema 迁移框架，升级前先备份；结构变更以 `server/schema.sql` 为准。
+
+## 备份与恢复
+
+`scripts/backup-postgres.sh` 从 `.env` 读取 `DATABASE_URL`，用容器内的 `pg_dump` 导出：
 
 ```bash
 sh scripts/backup-postgres.sh .env
 ```
 
-17 兼容部署备份：
+默认客户端镜像 `postgres:18-alpine`，18 的 `pg_dump` 可以备份 17 服务。需要匹配 17 客户端时：
 
 ```bash
-sh scripts/backup-postgres.sh .env 17
+PG_CLIENT_IMAGE=postgres:17-alpine sh scripts/backup-postgres.sh .env
 ```
 
-脚本在实际数据库容器中调用对应版本的 pg_dump。自行使用宿主机工具时，18 服务应配套使用 18 客户端，不能用 17 的 pg_dump 备份 18 服务。
+恢复：
 
-CI 分别连接 18 和 17 执行 API、金额、权限与迁移测试，并检查服务真实主版本。另有手动工作流 `verify-image.yml`，用已发布的 0.9.5 镜像测试对应 PostgreSQL 版本，验证数据库容器重建后的持久化、记账接口与备份恢复。
+```bash
+createdb zhu_jia_restore
+pg_restore --no-owner --no-privileges --dbname=zhu_jia_restore backups/替换为备份文件.dump
+```
 
-0.9.5 已通过以下实际验证：
+先在独立库演练，核对家庭、项目、金额和备忘，再切换正式库。外部数据库也可以直接使用云平台的快照能力。
 
-- [CI：PostgreSQL 18 / 17 与三种 Docker 存储配置](https://github.com/dddyszy/renovation_assistant_web/actions/runs/40908628585)。
-- [已发布镜像 + PostgreSQL 18：持久化、接口与备份恢复](https://github.com/dddyszy/renovation_assistant_web/actions/runs/40908628969)。
-- [已发布镜像 + PostgreSQL 17：持久化、接口与备份恢复](https://github.com/dddyszy/renovation_assistant_web/actions/runs/40908635859)。
+## 切换存储
+
+内置 PGlite 与外置 PostgreSQL 之间可以用迁移工具复制数据，见 [存储迁移](storage-migration.md)。切换不会自动搬迁，需要显式执行。

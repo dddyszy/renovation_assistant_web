@@ -39,17 +39,14 @@ curl --fail http://127.0.0.1:8080/api/v1/health
 其他场景按需增加一个配置文件：
 
 ```bash
-# Compose PostgreSQL 18：先在 .env 设置 POSTGRES_PASSWORD。
-docker compose -f compose.yaml -f compose.postgres.yaml up -d --build --wait
-
-# 已有 PostgreSQL：先在 .env 设置 DATABASE_URL。
+# 外置 PostgreSQL（18 推荐，兼容 17）：先在 .env 设置 DATABASE_URL。
 docker compose -f compose.yaml -f compose.external.yaml up -d --build --wait
 
 # 使用已发布的 GHCR 镜像，不在服务器构建。
 docker compose -f compose.yaml -f compose.image.yaml up -d --no-build --wait
 ```
 
-PostgreSQL 17、宿主机目录挂载和参数细节见部署文档。不要使用 `down -v` 做正常升级，它会删除数据卷。
+外置 PostgreSQL、宿主机目录挂载和参数细节见部署文档。不要使用 `down -v` 做正常升级，它会删除数据卷。
 
 - [Docker 部署](docs/docker.md) · [PostgreSQL](docs/postgresql.md)
 - [容器镜像仓库](docs/container-registry.md) · [配置参考](docs/configuration.md) · [运维手册](docs/operations.md)
