@@ -76,7 +76,7 @@ tests/                隔离测试，不访问开发或正式数据库
 
 完整 PostgreSQL 部署默认 18，继续兼容 17。测试只允许专用可丢弃的 `TEST_DATABASE_URL`；迁移集成测试另用 `TEST_MIGRATION_TARGET_DATABASE`，不能指向用户数据。迁移工具默认预检并拒绝覆盖非空目标。
 
-新增环境变量时同步 `.env.example` 或 `.env.docker.example`、[配置参考](docs/configuration.md) 和相关部署说明。数据库结构升级必须提供版本化迁移、旧数据验证和恢复方案，修改初始建表语句不会升级已有表。
+新增环境变量时同步 `.env.example`、[配置参考](docs/configuration.md) 和相关部署说明。数据库结构升级必须提供版本化迁移、旧数据验证和恢复方案，修改初始建表语句不会升级已有表。
 
 ## 提交和评审
 

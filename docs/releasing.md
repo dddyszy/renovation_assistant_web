@@ -1,12 +1,12 @@
 # 发布流程
 
-当前版本：0.9.6。发布版本只在当前交付和验证范围内作承诺，未来工作放入 roadmap。
+当前版本：0.9.7。发布版本只在当前交付和验证范围内作承诺，未来工作放入 roadmap。
 
 ## 版本来源
 
 package.json 是应用版本来源，package-lock.json 根版本须同步。`shared/version.ts` 供前后端读取，构建阶段把版本写入 Service Worker 缓存名。
 
-发布时还需更新 compose.yaml 默认 APP_IMAGE_TAG、Dockerfile 默认 APP_VERSION、`.env.docker.example` 和 CHANGELOG 中的版本。镜像标签是部署元数据，不能仅改镜像名就把旧源码称为新版本。
+发布时还需更新 compose.yaml 的镜像标签、compose.image.yaml 默认标签、Dockerfile 默认 APP_VERSION、`.env.example` 中的可选镜像标签、CI 工作流和 CHANGELOG。镜像标签是部署元数据，不能仅改镜像名就把旧源码称为新版本。
 
 ## 发布前
 
@@ -19,7 +19,7 @@ npm run check
 
 Docker 环境运行内置、外置配置验证，并构建对应架构镜像。源仓库已上传到 GitHub，普通 CI 负责校验；`publish-image.yml` 负责将通过验证的 AMD64/ARM64 镜像发布到 GHCR，见 [容器镜像仓库](container-registry.md)。
 
-新增 schema 变更必须包括旧数据升级和回滚方案。0.9.6 仍使用初始 schema，后续版本优先引入正式迁移框架。
+新增 schema 变更必须包括旧数据升级和回滚方案。0.9.7 仍使用初始 schema，后续版本优先引入正式迁移框架。
 
 ## 发布验收
 
