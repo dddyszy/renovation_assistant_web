@@ -1,6 +1,6 @@
 # API 参考
 
-版本：0.9.8，前缀 `/api/v1`。以下为当前实现摘要，字段约束以 `server/schemas.ts`、`server/routes/` 和 `server/schema.sql` 为准。
+版本：0.9.9，前缀 `/api/v1`。以下为当前实现摘要，字段约束以 `server/schemas.ts`、`server/routes/` 和 `server/schema.sql` 为准。
 
 ## 通用约定
 

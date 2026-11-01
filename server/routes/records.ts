@@ -149,7 +149,9 @@ export function registerRecordsRoutes(app: FastifyInstance, context: RequestCont
     });
   }
   for (const table of ["costs", "materials", "stages", "notes", "note_columns"]) {
-    app.delete(`${scope}/${table}/:rid`, { preHandler: project }, async (r) => {
+    // API paths use kebab-case while the database keeps snake_case table names.
+    const path = table === "note_columns" ? "note-columns" : table;
+    app.delete(`${scope}/${path}/:rid`, { preHandler: project }, async (r) => {
       allow(r, table === "stages" ? ["owner", "admin"] : undefined);
       const b = z.object({ version, confirm: z.boolean().optional() }).parse(r.body);
       return data(
@@ -171,21 +173,22 @@ export function registerRecordsRoutes(app: FastifyInstance, context: RequestCont
             if (n!.count && !b.confirm)
               fail(409, "COLUMN_NOT_EMPTY", "专栏仍有备忘，请先移走或删除其中的备忘");
           }
+          const deletedAt = new Date();
           const next = await update(tx, table, row.id, r.familyId, b.version, {
-            deleted_at: new Date(),
+            deleted_at: deletedAt,
             updated_by: r.user.id,
           });
           if (table === "note_columns")
             await tx.query(
-              "UPDATE notes SET deleted_at=now(),version=version+1 WHERE column_id=$1 AND deleted_at IS NULL",
-              [row.id],
+              "UPDATE notes SET deleted_at=$1,version=version+1,updated_at=now() WHERE column_id=$2 AND deleted_at IS NULL",
+              [deletedAt, row.id],
             );
           await audit(tx, r, "删除记录", table, row.id, row.name || row.title);
           return next;
         }),
       );
     });
-    app.post(`${scope}/${table}/:rid/restore`, { preHandler: project }, async (r) => {
+    app.post(`${scope}/${path}/:rid/restore`, { preHandler: project }, async (r) => {
       allow(r, table === "stages" ? ["owner", "admin"] : undefined);
       const b = z.object({ version }).parse(r.body);
       return data(
@@ -203,6 +206,12 @@ export function registerRecordsRoutes(app: FastifyInstance, context: RequestCont
             updated_by: r.user.id,
             ...(table === "costs" ? { stage_id: row.stageId } : {}),
           });
+          // Restore the notes removed together with their column in the same operation.
+          if (table === "note_columns")
+            await tx.query(
+              "UPDATE notes SET deleted_at=NULL,version=version+1,updated_at=now() WHERE column_id=$1 AND deleted_at=$2",
+              [row.id, row.deletedAt],
+            );
           await audit(tx, r, "恢复记录", table, row.id, row.name || row.title);
           return next;
         }),

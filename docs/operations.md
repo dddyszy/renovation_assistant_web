@@ -1,6 +1,6 @@
 # 运维手册
 
-版本：0.9.8。运行命令应始终使用同一份 `.env` 和同一组 Compose 配置，避免误启用另一种存储模式。
+版本：0.9.9。运行命令应始终使用同一份 `.env` 和同一组 Compose 配置，避免误启用另一种存储模式。
 
 ## 查看运行状态
 
@@ -12,7 +12,7 @@ docker compose logs --tail 100 app
 curl --fail http://127.0.0.1:8080/api/v1/health
 ```
 
-健康检查确认 API 与数据库查询均可用，并显示版本 0.9.8。它不代表邮件投递、服务器反代或全部浏览器交互已经验证。
+健康检查确认 API 与数据库查询均可用，并显示版本 0.9.9。它不代表邮件投递、服务器反代或全部浏览器交互已经验证。
 
 日志默认每个文件 10 MB、最多 3 个，不记录普通请求 URL 或 Cookie。向别人提供日志前检查数据库地址等环境信息，不复制 `.env`。
 
@@ -27,7 +27,7 @@ chmod 700 backups
 docker run --rm \
   -v zhu-jia-web_app_data:/source:ro \
   -v "$(pwd)/backups:/backup" \
-  alpine:3.22 tar -C /source -czf /backup/embedded-0.9.8.tar.gz .
+  alpine:3.22 tar -C /source -czf /backup/embedded-0.9.9.tar.gz .
 docker compose start app
 ```
 

@@ -1,6 +1,6 @@
 # 筑家手记 Web
 
-当前版本：**0.9.8** · [文档导航](docs/README.md) · [更新记录](CHANGELOG.md) · [版本路线图](docs/roadmap.md)
+当前版本：**0.9.9** · [文档导航](docs/README.md) · [更新记录](CHANGELOG.md) · [版本路线图](docs/roadmap.md)
 
 面向家庭协作的装修管理应用，使用 Vue 3 + TypeScript + Vite，支持电脑和手机浏览器。沿用原微信小程序的暖色家居风格，以独立账号、家庭与共享项目替代微信个人身份。
 
@@ -34,7 +34,7 @@ docker compose up -d --build --wait
 curl --fail http://127.0.0.1:8080/api/v1/health
 ```
 
-健康接口应返回 `status=ok` 和 `version=0.9.8`。应用同时提供页面和 API，服务器现有 Nginx 可转发到 `127.0.0.1:8080`。本机验证只监听回环地址，不应把它当作局域网或公网入口。
+健康接口应返回 `status=ok` 和 `version=0.9.9`。应用同时提供页面和 API，服务器现有 Nginx 可转发到 `127.0.0.1:8080`。本机验证只监听回环地址，不应把它当作局域网或公网入口。
 
 其他场景按需增加一个配置文件：
 
