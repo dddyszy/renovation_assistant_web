@@ -1,34 +1,34 @@
 # 运维手册
 
-版本：0.9.6。运行命令应始终使用同一份 `.env.docker` 和同一组 Compose 配置，避免误启用另一种存储模式。
+版本：0.9.7。运行命令应始终使用同一份 `.env` 和同一组 Compose 配置，避免误启用另一种存储模式。
 
 ## 查看运行状态
 
 以下例子为内置模式，外置/自带 PostgreSQL 时加入相应配置文件：
 
 ```bash
-docker compose --env-file .env.docker -f compose.yaml ps
-docker compose --env-file .env.docker -f compose.yaml logs --tail 100 app
+docker compose ps
+docker compose logs --tail 100 app
 curl --fail http://127.0.0.1:8080/api/v1/health
 ```
 
-健康检查确认 API 与数据库查询均可用，并显示版本 0.9.6。它不代表邮件投递、服务器反代或全部浏览器交互已经验证。
+健康检查确认 API 与数据库查询均可用，并显示版本 0.9.7。它不代表邮件投递、服务器反代或全部浏览器交互已经验证。
 
-日志默认每个文件 10 MB、最多 3 个，不记录普通请求 URL 或 Cookie。向别人提供日志前检查数据库地址等环境信息，不复制 `.env.docker`。
+日志默认每个文件 10 MB、最多 3 个，不记录普通请求 URL 或 Cookie。向别人提供日志前检查数据库地址等环境信息，不复制 `.env`。
 
 ## 内置模式备份
 
 先停止应用，确保 PGlite 正常关闭，再备份完整数据卷：
 
 ```bash
-docker compose --env-file .env.docker -f compose.yaml stop app
+docker compose stop app
 mkdir -p backups
 chmod 700 backups
 docker run --rm \
   -v zhu-jia-web_app_data:/source:ro \
   -v "$(pwd)/backups:/backup" \
-  alpine:3.22 tar -C /source -czf /backup/embedded-0.9.6.tar.gz .
-docker compose --env-file .env.docker -f compose.yaml start app
+  alpine:3.22 tar -C /source -czf /backup/embedded-0.9.7.tar.gz .
+docker compose start app
 ```
 
 每次备份使用新的文件名，避免覆盖唯一副本。目录挂载模式备份对应宿主机 DATA_DIR，仍先停止应用。不能将运行中的部分数据库文件复制为可靠备份。
@@ -40,10 +40,10 @@ docker compose --env-file .env.docker -f compose.yaml start app
 同 Compose 启动的数据库可使用脚本：
 
 ```bash
-sh scripts/backup-postgres.sh .env.docker
+sh scripts/backup-postgres.sh .env
 ```
 
-该命令默认使用 PostgreSQL 18 配置。17 兼容部署使用 `sh scripts/backup-postgres.sh .env.docker 17`，确保执行命令对应实际数据库配置。数据库客户端在容器内，随 18/17 服务版本匹配；不要用宿主机的 17 pg_dump 备份 18 服务。
+该命令默认使用 PostgreSQL 18 配置。17 兼容部署使用 `sh scripts/backup-postgres.sh .env 17`，确保执行命令对应实际数据库配置。数据库客户端在容器内，随 18/17 服务版本匹配；不要用宿主机的 17 pg_dump 备份 18 服务。
 
 脚本在容器内执行 pg_dump，自定义格式输出到 `backups/`，文件权限仅限当前用户；失败时移除不完整文件。文件名使用 UTC 时间戳。
 

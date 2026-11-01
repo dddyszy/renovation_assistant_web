@@ -1,6 +1,6 @@
 # 筑家手记文档导航
 
-当前版本：**0.9.6**。以下文档对应 Web 项目，原微信小程序独立保留。
+当前版本：**0.9.7**。以下文档对应 Web 项目，原微信小程序独立保留。
 
 | 你要做什么                               | 阅读文档                                    |
 | ---------------------------------------- | ------------------------------------------- |
@@ -8,7 +8,7 @@
 | 选择内置或外置存储，用 Docker 上线       | [Docker 部署](docker.md)                    |
 | 直接拉取 GitHub 镜像，或配置自动发布     | [容器镜像仓库](container-registry.md)       |
 | 查环境变量、端口和邮件配置               | [配置参考](configuration.md)                |
-| 按部署模式照着填写 .env.docker           | [Docker 参数填写指南](docker-parameters.md) |
+| 按部署模式照着填写 .env                  | [Docker 参数填写指南](docker-parameters.md) |
 | 默认使用 PostgreSQL 18，或兼容/迁移旧 17 | [PostgreSQL 部署与升级](postgresql.md)      |
 | 备份、恢复、升级和排查异常               | [运维手册](operations.md)                   |
 | 从内置数据库切换到外部 PostgreSQL        | [存储迁移](storage-migration.md)            |

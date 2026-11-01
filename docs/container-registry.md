@@ -1,6 +1,6 @@
 # 发布和使用 GitHub 容器镜像
 
-当前镜像地址：`ghcr.io/dddyszy/renovation_assistant_web:0.9.6`。版本标签只有在发布工作流成功后才可使用，以 GitHub Actions 的 Publish container image 结果为准。
+当前镜像地址：`ghcr.io/dddyszy/renovation_assistant_web:0.9.7`。版本标签只有在发布工作流成功后才可使用，以 GitHub Actions 的 Publish container image 结果为准。
 
 GHCR 是 GitHub 的容器镜像仓库。源代码保存在 Git 仓库，服务器从 GHCR 拉取构建好的镜像，无需安装 Node.js、运行 npm 或编译源码。
 
@@ -25,7 +25,7 @@ AMD64 与 ARM64 使用同一个地址，Docker 根据服务器架构选择，不
 gh workflow run publish-image.yml \
   --repo dddyszy/renovation_assistant_web \
   --ref main \
-  -f source_ref=v0.9.6
+  -f source_ref=v0.9.7
 ```
 
 后续版本将 package.json、部署默认版本和 CHANGELOG 同步后，提交代码并推送相应标签，自动触发发布；标签名必须和源码版本相同。若要重新发布旧版本，也使用该版本标签，避免把别的 commit 当成同一个版本。
@@ -40,7 +40,7 @@ gh workflow run publish-image.yml \
 read -rsp 'GHCR token: ' GHCR_TOKEN; printf '\n'
 printf '%s' "$GHCR_TOKEN" | docker login ghcr.io -u dddyszy --password-stdin
 unset GHCR_TOKEN
-docker pull ghcr.io/dddyszy/renovation_assistant_web:0.9.6
+docker pull ghcr.io/dddyszy/renovation_assistant_web:0.9.7
 ```
 
 以上为 Bash。使用其他 GitHub 账号部署时，将 `-u` 改成该账号，且确保已被授予 package 读取权限。`docker login` 会在该服务器保存登录配置，应使用专用部署账号或凭据存储。
@@ -49,34 +49,34 @@ docker pull ghcr.io/dddyszy/renovation_assistant_web:0.9.6
 
 ## 用 Compose 直接拉取运行
 
-0.9.6 镜像尚未发布时请按 [Docker 部署](docker.md) 从源码构建；以下拉取命令以对应镜像发布成功为前提。
+0.9.7 镜像尚未发布时请按 [Docker 部署](docker.md) 从源码构建；以下拉取命令以对应镜像发布成功为前提。
 
 部署前填写哪些参数、哪些可以留空，见 [Docker 参数填写指南](docker-parameters.md)。
 
-服务器只需复制选用的 Compose 配置、`.env.docker.example`。无需上传源代码和 node_modules。
+服务器只需复制选用的 Compose 配置和 `.env.example`，无需上传源代码和 node_modules。
 
 ```bash
-cp .env.docker.example .env.docker
+cp .env.example .env
 # 编辑 APP_ORIGIN；外部/自带 PostgreSQL 时同时填写数据库变量。
 ```
 
 内置数据库：
 
 ```bash
-docker compose --env-file .env.docker -f compose.yaml -f compose.image.yaml pull
-docker compose --env-file .env.docker -f compose.yaml -f compose.image.yaml up -d --no-build --wait
+docker compose -f compose.image.yaml pull
+docker compose -f compose.image.yaml up -d --no-build --wait
 ```
 
 已有外部 PostgreSQL：
 
 ```bash
-docker compose --env-file .env.docker -f compose.yaml -f compose.image.yaml -f compose.external.yaml up -d --no-build --wait
+docker compose -f compose.image.yaml -f compose.external.yaml up -d --no-build --wait
 ```
 
 随 Compose 启动 PostgreSQL：
 
 ```bash
-docker compose --env-file .env.docker -f compose.yaml -f compose.image.yaml -f compose.postgres.yaml up -d --no-build --wait
+docker compose -f compose.image.yaml -f compose.postgres.yaml up -d --no-build --wait
 ```
 
 上述命令默认使用 PostgreSQL 18。需要兼容 17 时将数据库配置换成 `-f compose.postgres17.yaml`，应用镜像地址不变。已有数据库跨主版本升级需迁移数据，见 [PostgreSQL 说明](postgresql.md)。
@@ -92,14 +92,14 @@ docker run -d --name zhu-jia --init --restart unless-stopped \
   -v zhu_jia_data:/app/data \
   -e DATABASE_URL=/app/data/postgres \
   -e APP_ORIGIN=http://home.example.com \
-  ghcr.io/dddyszy/renovation_assistant_web:0.9.6
+  ghcr.io/dddyszy/renovation_assistant_web:0.9.7
 ```
 
 将服务器现有站点代理到该端口，APP_ORIGIN 填浏览器实际访问的入口。数据保存在命名卷，替换容器不删除数据库。
 
 ## 升级与定位问题
 
-在 `.env.docker` 中修改 APP_IMAGE_TAG，使用原存储配置执行 pull 和 `up -d --no-build --wait`。先备份数据，保留旧版本标签；查看健康接口确认运行版本。
+在 `.env` 中修改 APP_IMAGE_TAG，使用原存储配置执行 pull 和 `up -d --no-build --wait`。先备份数据，保留旧版本标签；查看健康接口确认运行版本。
 
 - `unauthorized/denied`：检查登录账号、read:packages 和 package 访问权；不要把 GitHub 登录成功等同于已有镜像读取权限。
 - `manifest unknown`：确认完整地址和版本，以及发布流程是否成功。

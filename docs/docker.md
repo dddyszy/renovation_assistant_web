@@ -1,54 +1,37 @@
 # Docker 部署
 
-版本：0.9.6。应用镜像默认名称为 `zhu-jia-web:0.9.6`。使用 Docker Engine 或 Docker Desktop，Docker Compose **2.24.4 及以上**；配置中使用 `!reset`、`!override` 合并存储模式。
+版本：**0.9.7**。使用 Docker Engine 和 Docker Compose 2.24.4 及以上；可选覆盖配置使用 `!reset`。
 
-需要直接使用 GHCR 预构建镜像时，再加 `-f compose.image.yaml` 并使用 `--no-build`；私有镜像登录及完整命令见 [镜像仓库说明](container-registry.md)。以下默认命令用于从源码构建，两种部署方式共用存储配置。
+## 默认部署
 
-## 选择存储方式
-
-| 模式                               | 数据存在哪里                            | 配置文件                       | 适用情况                           |
-| ---------------------------------- | --------------------------------------- | ------------------------------ | ---------------------------------- |
-| 内置数据库                         | 应用使用 PGlite，目录持久化到 Docker 卷 | `compose.yaml`                 | 个人或单个家庭，最少组件           |
-| 外部 PostgreSQL                    | 独立服务器、云数据库或已有 PostgreSQL   | 再加 `compose.external.yaml`   | 数据库已有专人维护，应用与存储分离 |
-| Compose 自带 PostgreSQL 18（默认） | 单独数据库容器及独立数据卷              | 再加 `compose.postgres.yaml`   | 推荐的完整 PostgreSQL 部署         |
-| PostgreSQL 17 兼容                 | 单独数据库容器及原有 17 卷              | 改用 `compose.postgres17.yaml` | 已有 17 数据或仍需使用 17          |
-
-这三种模式共用同一套业务表和权限规则。内置模式只运行一个应用实例；外部 PostgreSQL 可以让应用容器独立重建。当前限流在应用进程内，尚不建议直接扩成多个应用副本。
-
-内置默认使用命名卷 `zhu-jia-web_app_data`，数据不在容器可写层。替换镜像、重建容器或执行 `docker compose down` 后数据仍保留；`down -v` 会删除数据卷，不用于正常升级。
-
-当前没有文件附件功能，这里的存储切换指账号、家庭、账本等数据库记录；S3/OSS 文件存储在后续版本规划中。
-
-## 准备配置
-
-各参数的必填条件、填写格式、默认值和完整示例见 [Docker 参数填写指南](docker-parameters.md)。内置模式通常只需修改 APP_ORIGIN；使用 PostgreSQL 时再填写对应数据库信息。应用提供 HTTP 服务，反向代理由服务器现有软件管理。
+默认模式只运行一个应用容器，使用内置 PGlite 数据库，数据保存在 `zhu-jia-web_app_data` 命名卷。
 
 ```bash
-cp .env.docker.example .env.docker
+cp .env.example .env
+# 修改 APP_ORIGIN 为浏览器实际访问地址；本机验证保留 http://localhost:8080。
+docker compose up -d --build --wait
+curl --fail http://127.0.0.1:8080/api/v1/health
 ```
 
-修改 `.env.docker`：
+健康接口应返回 `data.status=ok`、`data.version=0.9.7`。Compose 默认自动读取 `.env`，常用命令不需要 `--env-file` 或 `-f compose.yaml`。旧部署可继续显式传入原环境文件，新部署使用 `.env`。
 
-```dotenv
-APP_IMAGE_TAG=0.9.6
-APP_ORIGIN=http://home.example.com
-APP_PORT=8080
-```
+Docker 自动提供 `NODE_ENV=production`、容器监听地址和端口、健康检查；默认 Compose 不再重复设置。默认也不需要数据库密码、SMTP、镜像名或版本变量。
 
-`APP_ORIGIN` 是浏览器真实访问的来源，包含协议、域名或 IP，以及实际端口；不要填写容器内部地址或子路径。SMTP 可不填写，注册没有邮箱验证码；邮件找回密码需要 SMTP。
+## 保留的运行参数
 
-## 启动应用与服务器反代
+- `APP_ORIGIN` 必须填写：用于写请求来源校验和邮件找回链接，值是浏览器入口而不是容器地址。
+- `DATABASE_URL=/app/data/postgres`：选择内置数据库并固定持久化目录。
+- `127.0.0.1:8080:3001`：仅向宿主机回环地址开放应用端口。
+- `app_data:/app/data`：容器重建后保留数据。
+- `restart`、`init`、`stop_grace_period`：自动重启、信号转发和优雅退出。
+- `read_only`、`tmpfs`、`cap_drop`、`no-new-privileges`：保留基础容器安全限制。
+- 日志轮转：单个日志 10 MB、最多 3 个文件。
 
-以下以内置模式为例：
+`NODE_ENV/HOST/PORT/TSX_DISABLE_CACHE` 已在 Dockerfile 设置，无需写入 `.env`。不要删除数据卷或健康检查来换取更少配置行。
 
-```bash
-docker compose --env-file .env.docker -f compose.yaml config --quiet
-docker compose --env-file .env.docker -f compose.yaml up -d --build --wait
-```
+## 服务器反向代理
 
-宿主机端口默认只监听 `127.0.0.1:8080`。将服务器已有的 Nginx、宝塔或其他代理转发到该地址，整个站点一起代理，包括页面和 `/api/`，无需单独部署前端。应用不管理证书、站点域名或代理进程。
-
-Nginx 示例见 [deploy/nginx.conf](../deploy/nginx.conf)，可合并到服务器的现有站点配置：
+默认只监听宿主机 `127.0.0.1:8080`。将服务器已有 Nginx、宝塔或其他代理转发到该地址，整个站点一起代理，包括页面和 `/api/`：
 
 ```nginx
 server {
@@ -66,84 +49,89 @@ server {
 }
 ```
 
-对应 `APP_ORIGIN=http://home.example.com`。如果入口带非默认端口，也要把端口写入 APP_ORIGIN。修改配置后重新创建应用容器；入口来源用于写请求校验与邮件找回链接，不依赖代理头自动推断。会话 Cookie 的 Secure 属性按入口协议设置，HttpOnly 和 SameSite 始终保留。
+对应 `APP_ORIGIN=http://home.example.com`。入口有非默认端口时也要写入；暂不支持子路径部署。代理也运行在容器内时，转发到同一 Docker 网络中的 `app:3001`，不要使用代理容器自身的 `127.0.0.1`。
 
-反代也运行在容器内时，将代理和应用加入同一个 Docker 网络，通过服务名 `app:3001` 转发；代理容器中的 `127.0.0.1` 不是宿主机。不需要把数据库端口暴露给代理。
+需要修改宿主机端口时，直接修改 `compose.yaml` 的 `ports`，例如将 `127.0.0.1:8080:3001` 改为 `127.0.0.1:8081:3001`，并同步修改 `APP_ORIGIN`。无需再增加一个端口变量。
 
-应用部署在站点根路径，例如 `http://home.example.com`；暂不支持 `/renovation/` 之类的子路径部署。服务器上可直接用 `curl --fail http://127.0.0.1:8080/api/v1/health` 检查应用，再从配置的域名测试注册和登录。
+## 可选存储
 
-0.9.6 开发版需从当前源码构建；预构建镜像是否可用以发布流程为准。
+### Compose PostgreSQL 18
 
-## 外置数据库模式
-
-在外部 PostgreSQL 中创建专用数据库和账号，账号需要在该数据库中创建表、索引并读写数据。填写：
-
-```dotenv
-POSTGRES_HOST=your-db.example.internal
-POSTGRES_PORT=5432
-POSTGRES_DB=zhu_jia
-POSTGRES_USER=zhu_jia
-POSTGRES_PASSWORD=填写真实数据库密码
-POSTGRES_SSLMODE=verify-full
-```
-
-使用可信证书的服务器选 `verify-full`；明确不提供 TLS 的受控内网数据库才使用 `disable`。云数据库需允许应用服务器的来源地址。密码通过 `PGPASSWORD` 单独传递，包含 `@`、`/`、`%` 等字符时无需拼接和转义连接 URL。
+在 `.env` 设置 `POSTGRES_PASSWORD`，库名和账号可保留默认：
 
 ```bash
-docker compose --env-file .env.docker -f compose.yaml -f compose.external.yaml config --quiet
-docker compose --env-file .env.docker -f compose.yaml -f compose.external.yaml up -d --build --wait
+docker compose -f compose.yaml -f compose.postgres.yaml up -d --build --wait
 ```
 
-外置配置移除应用数据卷，数据库记录由外部服务持久化。`POSTGRES_HOST=127.0.0.1` 会指向容器自身；访问宿主机数据库应使用 `host.docker.internal`，并让宿主机 PostgreSQL 接受来自容器网络的连接。
+数据库不向宿主机公开 5432 端口，应用等待数据库健康后启动。数据保存在 `zhu-jia-web_postgres18_data`。
 
-## Compose 自带 PostgreSQL 18，兼容 17
+### PostgreSQL 17 兼容
 
-无需填写 `POSTGRES_HOST`，数据库服务名固定为 `db`。设置专用密码，例如用 `openssl rand -hex 32` 生成后填入 `.env.docker`。
+已有 17 数据时使用原数据卷，不能直接让 18 打开旧目录：
 
 ```bash
-docker compose --env-file .env.docker -f compose.yaml -f compose.postgres.yaml up -d --build --wait
+docker compose -f compose.yaml -f compose.postgres17.yaml up -d --build --wait
 ```
 
-默认镜像为 `postgres:18-alpine`，数据卷为 `zhu-jia-web_postgres18_data`，挂载到 `/var/lib/postgresql`，实际数据目录为 `/var/lib/postgresql/18/docker`。应用等待数据库健康后启动，数据库不向宿主机公开 5432 端口。容器私有网络中的数据库连接关闭 TLS，服务器代理仍转发到同一个应用端口。
+18 与 17 配置二选一。数据库升级和迁移见 [PostgreSQL 说明](postgresql.md)。
 
-需要 17 时将命令中的数据库配置改为 `-f compose.postgres17.yaml`。该配置继续使用原来的 `zhu-jia-web_postgres_data` 卷。**原先运行 17 的部署，更新配置文件后要选择 17 兼容文件，或先按升级流程迁移；不能直接用 18 读取旧卷。**完整命令与说明见 [PostgreSQL 18 与 17](postgresql.md)。
+### 已有外部 PostgreSQL
 
-首次初始化后修改 `POSTGRES_PASSWORD` 环境变量不会自动更改已有数据库账号的密码。应先在 PostgreSQL 中修改密码，再更新应用配置，不能通过删除数据卷解决密码不匹配。
-
-## 将内置存储挂到宿主机磁盘
-
-内置数据库也可以使用宿主机目录，而不是命名卷：
-
-```dotenv
-DATA_DIR=/srv/zhu-jia/data
-```
+在 `.env` 填写真实 `POSTGRES_HOST/PORT/DB/USER/PASSWORD/SSLMODE`：
 
 ```bash
-mkdir -p /srv/zhu-jia/data
-# Linux 上目录需要允许容器内 UID/GID 1000 写入；仅针对新建的专用目录设置。
+docker compose -f compose.yaml -f compose.external.yaml up -d --build --wait
+```
+
+数据库账号需能创建表、索引并读写业务数据。`127.0.0.1` 指应用容器自身；宿主机数据库可使用 `host.docker.internal`，并配置数据库监听和访问权限。
+
+### 内置数据挂到宿主机目录
+
+设置专用绝对路径 `DATA_DIR=/srv/zhu-jia/data`：
+
+```bash
+sudo mkdir -p /srv/zhu-jia/data
 sudo chown 1000:1000 /srv/zhu-jia/data
-docker compose --env-file .env.docker -f compose.yaml -f compose.bind.yaml up -d --build --wait
+docker compose -f compose.yaml -f compose.bind.yaml up -d --build --wait
 ```
 
-切换已有命名卷到目录挂载前，先停应用并备份、复制完整数据目录；挂载一个空目录会呈现全新数据库。目录挂载与外部 PostgreSQL 是两回事，不叠加 `compose.bind.yaml` 和两个 PostgreSQL 配置。
+切换已有卷前先备份和迁移，不能把空目录当作原数据。目录挂载不与 PostgreSQL 配置叠加。
 
-## 单独构建镜像
+## 可选 SMTP
+
+普通注册登录不需要邮件。只有密码找回需要 SMTP，在 `.env` 填写 `SMTP_HOST`、`SMTP_FROM` 及服务商要求的账号参数，然后叠加：
 
 ```bash
-docker build --build-arg APP_VERSION=0.9.6 -t zhu-jia-web:0.9.6 .
+docker compose -f compose.yaml -f compose.smtp.yaml up -d --build --wait
 ```
 
-多阶段构建先做类型检查、前端构建和自动测试，再生成运行镜像。运行层使用 Node.js 24、生产依赖和非 root 用户，应用以前台 Node 进程运行，接收终止信号后关闭 API 和数据库。
+这样未使用邮件的部署不会携带空 SMTP 参数。
 
-本地的 `.env*`、数据库、截图、node_modules 不进入构建上下文。镜像中不包含演示账号数据。ARM64/AMD64 需分别构建对应平台镜像，不能复制宿主机 node_modules 进去。
+## 使用预构建镜像
 
-## 健康检查和验收
+对应 GHCR 镜像发布成功后：
 
 ```bash
-docker compose --env-file .env.docker -f compose.yaml ps
+docker compose -f compose.yaml -f compose.image.yaml pull
+docker compose -f compose.yaml -f compose.image.yaml up -d --no-build --wait
+```
+
+默认地址为 `ghcr.io/dddyszy/renovation_assistant_web:0.9.7`。需要其他仓库或候选镜像时，才在 `.env` 设置 `APP_IMAGE` 和 `APP_IMAGE_TAG`。私有镜像登录见 [容器镜像仓库](container-registry.md)。
+
+## 构建、升级与验收
+
+单独构建：
+
+```bash
+docker build -t zhu-jia-web:0.9.7 .
+```
+
+Dockerfile 内执行 lint、格式检查、类型检查、前端构建和测试；运行层只保留生产依赖，使用非 root 用户。升级使用原存储配置重新 `up -d --build --wait`，不要使用 `down -v`。
+
+```bash
+docker compose ps
+docker compose logs --tail 100 app
 curl --fail http://127.0.0.1:8080/api/v1/health
 ```
 
-健康接口同时查询数据库并返回版本，期望 `data.status=ok`、`data.version=0.9.6`。启动失败时用相同配置组合查看 `logs --tail 100 app`，外置模式优先检查数据库地址、账号、TLS 和网络。
-
-CI 配置在 `.github/workflows/ci.yml`，包含内置与 PostgreSQL 容器的构建和 HTTP 验收。本机如果没有 Docker 引擎，只能完成配置检查和非容器测试；容器是否真正启动必须以 Docker 运行结果为准。
+实际容器运行和 HTTP 验收才算部署验证通过；`docker compose config` 只能检查配置展开。真实域名、SMTP、备份恢复仍需在目标环境单独验收。

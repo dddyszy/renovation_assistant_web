@@ -1,7 +1,7 @@
 #!/bin/sh
 set -eu
 umask 077
-env_file=${1:-.env.docker}
+env_file=${1:-.env}
 database_version=${2:-18}
 case "$database_version" in
   17) compose_database=compose.postgres17.yaml ;;

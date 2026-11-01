@@ -1,4 +1,4 @@
-name: Verify 0.9.6
+name: Verify 0.9.7
 on:
   push:
     branches: [main]
@@ -59,6 +59,8 @@ jobs:
           docker compose -f compose.yaml -f compose.postgres.yaml config --quiet
           docker compose -f compose.yaml -f compose.postgres17.yaml config --quiet
           DATA_DIR=/tmp/zhu-jia docker compose -f compose.yaml -f compose.bind.yaml config --quiet
+          SMTP_HOST=smtp.example.test SMTP_FROM='CI <ci@example.test>' docker compose -f compose.yaml -f compose.smtp.yaml config --quiet
+          docker compose -f compose.yaml -f compose.image.yaml config --quiet
       - name: Build and start
         run: |
           files=(-f compose.yaml)
@@ -67,6 +69,10 @@ jobs:
             postgres17) files+=(-f compose.postgres17.yaml) ;;
           esac
           docker compose "${files[@]}" up -d --build --wait --wait-timeout 180
+      - name: Verify image version and runtime user
+        run: |
+          test "$(docker image inspect zhu-jia-web:0.9.7 --format '{{ index .Config.Labels "org.opencontainers.image.version" }}')" = 0.9.7
+          test "$(docker compose exec -T app id -u)" = 1000
       - run: node scripts/docker-smoke.mjs
         env:
           SMOKE_ALLOW_WRITE: "yes"

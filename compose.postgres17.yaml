@@ -1,4 +1,4 @@
-# PostgreSQL 17 compatibility profile; keeps the original postgres_data volume.
+# Optional: PostgreSQL 17 compatibility profile with the original data volume.
 services:
   app:
     environment:
@@ -7,7 +7,7 @@ services:
       PGPORT: "5432"
       PGDATABASE: ${POSTGRES_DB:-zhu_jia}
       PGUSER: ${POSTGRES_USER:-zhu_jia}
-      PGPASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}
+      PGPASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
       PGSSLMODE: disable
     depends_on:
       db:
@@ -19,9 +19,9 @@ services:
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-zhu_jia}
       POSTGRES_USER: ${POSTGRES_USER:-zhu_jia}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
       PGDATA: /var/lib/postgresql/data
-    volumes: !override
+    volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
       test: [CMD-SHELL, 'pg_isready -U "$$POSTGRES_USER" -d "$$POSTGRES_DB"']
