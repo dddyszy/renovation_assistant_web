@@ -12,6 +12,7 @@ import { useQueryClient } from "@tanstack/vue-query";
 import { X, Plus, Trash2, Archive, RotateCcw, Copy, Wallet, Package } from "@lucide/vue";
 import { useWorkspace, type Item } from "../stores/workspace";
 import { request, errorMessage } from "../services/api";
+import LinkText from "./LinkText.vue";
 import { templates, categories, toCents, parseNotes, money } from "../../shared/domain";
 import { useProjectQuery } from "../composables/useProjectQuery";
 const w = useWorkspace(),
@@ -25,6 +26,9 @@ const w = useWorkspace(),
   deleteConfirm = ref(false);
 const stages = useProjectQuery("stages"),
   columns = useProjectQuery("note-columns");
+const viewColumn = computed(
+  () => columns.data.value?.data?.find((c) => c.id === w.editing?.columnId)?.name || "",
+);
 const materials = ref<Material[]>([]),
   requestId = ref(""),
   priorFocus = ref<HTMLElement>();
@@ -50,6 +54,7 @@ const title = computed(
             ? "编辑装修备忘"
             : "查看装修备忘"
           : "记录一个家的想法",
+        noteView: "查看装修备忘",
         column: w.editing ? "修改专栏" : "新建备忘专栏",
         stage: w.editing ? "阶段设置" : "添加装修阶段",
         projects: "我们的装修项目",
@@ -537,7 +542,27 @@ function copyPrevious() {
           </div></template
         >
         <form v-else @submit.prevent="save">
-          <fieldset :disabled="!writable" class="form-fieldset">
+          <fieldset :disabled="!writable && w.modal !== 'noteView'" class="form-fieldset">
+            <template v-if="w.modal === 'noteView'">
+              <div class="note-view">
+                <h3>{{ w.editing?.title }}</h3>
+                <p class="note-view-meta">
+                  {{ viewColumn || "未分类" }} ·
+                  {{ w.editing?.status === "confirmed" ? "已确认" : "待确认" }}
+                  <span v-if="w.editing?.starred"> · 重点</span>
+                </p>
+                <ul v-if="w.editing?.details?.length">
+                  <li v-for="(d, i) in w.editing.details" :key="i">
+                    <LinkText :text="d" />
+                  </li>
+                </ul>
+                <p v-else class="note-view-empty">暂无具体描述</p>
+                <p class="note-view-footer">
+                  {{ w.editing?.creatorName }}记录 ·
+                  {{ (w.editing?.createdAt || "").slice(0, 10).replaceAll("-", ".") }}
+                </p>
+              </div>
+            </template>
             <div v-if="localMessage" class="info-box">{{ localMessage }}</div>
             <template v-if="['destroyProject', 'dissolveFamily'].includes(w.modal)"
               ><div class="error-box">
@@ -927,42 +952,65 @@ function copyPrevious() {
             >
           </fieldset>
           <footer class="modal-footer">
-            <button
-              v-if="
-                w.editing?.id &&
-                !['project', 'destroyProject'].includes(w.modal) &&
-                writable
-              "
-              type="button"
-              class="text-btn danger"
-              :disabled="busy"
-              @click="remove"
-            >
-              <Trash2 :size="16" />{{
-                deleteConfirm
-                  ? w.modal === "column"
-                    ? "再次点击确认删除专栏及备忘"
-                    : "再次点击确认删除"
-                  : "删除"
-              }}</button
-            ><span v-else class="save-hint">{{
-              w.modal === "cost" && !w.editing?.id ? "未提交内容会自动保存为本机草稿" : ""
-            }}</span>
-            <div class="inline-actions">
-              <button type="button" class="btn secondary" :disabled="busy" @click="close">
-                取消</button
-              ><button v-if="writable" class="btn primary" :disabled="busy">
-                {{
-                  busy
-                    ? "正在保存…"
-                    : w.modal === "import"
-                      ? "确认导入"
-                      : ["destroyProject", "dissolveFamily"].includes(w.modal)
-                        ? "确认永久删除"
-                        : "保存"
-                }}
-              </button>
-            </div>
+            <template v-if="w.modal === 'noteView'">
+              <span class="save-hint"></span>
+              <div class="inline-actions">
+                <button type="button" class="btn secondary" @click="close">关闭</button>
+                <button
+                  v-if="w.canWrite"
+                  type="button"
+                  class="btn primary"
+                  @click="w.open('note', w.editing)"
+                >
+                  编辑
+                </button>
+              </div>
+            </template>
+            <template v-else>
+              <button
+                v-if="
+                  w.editing?.id &&
+                  !['project', 'destroyProject'].includes(w.modal) &&
+                  writable
+                "
+                type="button"
+                class="text-btn danger"
+                :disabled="busy"
+                @click="remove"
+              >
+                <Trash2 :size="16" />{{
+                  deleteConfirm
+                    ? w.modal === "column"
+                      ? "再次点击确认删除专栏及备忘"
+                      : "再次点击确认删除"
+                    : "删除"
+                }}</button
+              ><span v-else class="save-hint">{{
+                w.modal === "cost" && !w.editing?.id
+                  ? "未提交内容会自动保存为本机草稿"
+                  : ""
+              }}</span>
+              <div class="inline-actions">
+                <button
+                  type="button"
+                  class="btn secondary"
+                  :disabled="busy"
+                  @click="close"
+                >
+                  取消</button
+                ><button v-if="writable" class="btn primary" :disabled="busy">
+                  {{
+                    busy
+                      ? "正在保存…"
+                      : w.modal === "import"
+                        ? "确认导入"
+                        : ["destroyProject", "dissolveFamily"].includes(w.modal)
+                          ? "确认永久删除"
+                          : "保存"
+                  }}
+                </button>
+              </div>
+            </template>
           </footer>
         </form>
       </section>

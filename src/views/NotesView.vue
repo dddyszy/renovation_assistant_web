@@ -16,6 +16,7 @@ import { useWorkspace } from "../stores/workspace";
 import { useProjectQuery } from "../composables/useProjectQuery";
 import { request, errorMessage } from "../services/api";
 import QueryState from "../components/QueryState.vue";
+import LinkText from "../components/LinkText.vue";
 import EmptyState from "../components/EmptyState.vue";
 import NotesTransfer from "../components/NotesTransfer.vue";
 const transferOpen = ref(false);
@@ -254,7 +255,12 @@ watch(
               :class="{ gold: n.starred }"
               :fill="n.starred ? 'currentColor' : 'none'"
             /></button
-          ><button class="note-title" :disabled="deleted" @click="w.open('note', n)">
+          ><button
+            class="note-title"
+            :disabled="deleted"
+            title="查看备忘详情"
+            @click="w.open('noteView', n)"
+          >
             {{ n.title }}</button
           ><button
             v-if="!deleted"
@@ -270,7 +276,7 @@ watch(
           </button>
         </header>
         <ul v-if="n.details.length">
-          <li v-for="(d, i) in n.details" :key="i">{{ d }}</li>
+          <li v-for="(d, i) in n.details" :key="i"><LinkText :text="d" /></li>
         </ul>
         <footer>
           {{ n.creatorName }}记录 ·
