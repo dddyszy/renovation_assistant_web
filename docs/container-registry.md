@@ -63,20 +63,20 @@ cp .env.example .env
 内置数据库：
 
 ```bash
-docker compose -f compose.image.yaml pull
-docker compose -f compose.image.yaml up -d --no-build --wait
+docker compose -f compose.yaml -f compose.image.yaml pull
+docker compose -f compose.yaml -f compose.image.yaml up -d --no-build --wait
 ```
 
 已有外部 PostgreSQL：
 
 ```bash
-docker compose -f compose.image.yaml -f compose.external.yaml up -d --no-build --wait
+docker compose -f compose.yaml -f compose.image.yaml -f compose.external.yaml up -d --no-build --wait
 ```
 
 随 Compose 启动 PostgreSQL：
 
 ```bash
-docker compose -f compose.image.yaml -f compose.postgres.yaml up -d --no-build --wait
+docker compose -f compose.yaml -f compose.image.yaml -f compose.postgres.yaml up -d --no-build --wait
 ```
 
 上述命令默认使用 PostgreSQL 18。需要兼容 17 时将数据库配置换成 `-f compose.postgres17.yaml`，应用镜像地址不变。已有数据库跨主版本升级需迁移数据，见 [PostgreSQL 说明](postgresql.md)。
