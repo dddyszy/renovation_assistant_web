@@ -195,6 +195,14 @@ export function registerRecordsRoutes(app: FastifyInstance, context: RequestCont
         await writeTransaction(r, async (tx) => {
           const row = await resource(tx, r, table, param(r, "rid"), true);
           if (table === "notes") await resource(tx, r, "note_columns", row.columnId);
+          if (table === "note_columns") {
+            const [conflict] = await tx.query(
+              "SELECT id FROM note_columns WHERE project_id=$1 AND name=$2 AND deleted_at IS NULL",
+              [r.project.id, row.name],
+            );
+            if (conflict)
+              fail(409, "COLUMN_NAME_TAKEN", "已有同名专栏，请先改名后再撤销删除");
+          }
           if (table === "costs" && row.materialId) {
             const [m] = await tx.query("SELECT stage_id FROM materials WHERE id=$1", [
               row.materialId,

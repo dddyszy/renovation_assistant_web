@@ -170,3 +170,216 @@ test("非空专栏需确认删除，撤销时只恢复随专栏删除的备忘",
     [earlier.id],
   );
 });
+
+async function account(nickname: string) {
+  const credentials = {
+    email: `${randomUUID()}@columns.test`,
+    password: "ColumnTest!123",
+  };
+  await api("/auth/register", "POST", { ...credentials, nickname });
+  return (await api("/auth/login", "POST", credentials)).cookie;
+}
+
+test("只读成员不能删除专栏，删除不存在的专栏返回 404", async () => {
+  const { cookie, base } = await workspace();
+  const target = await column(base, cookie, "只读不可删");
+  const viewer = await account("只读成员");
+  const familyPath = base.split("/projects/")[0]!;
+  const invite = await api(
+    `${familyPath}/invitations`,
+    "POST",
+    { role: "viewer" },
+    cookie,
+  );
+  const token = invite.json.data.path.split("/").pop();
+  assert.equal(
+    (await api(`/invitations/${token}/accept`, "POST", {}, viewer)).status,
+    200,
+  );
+  assert.equal(
+    (
+      await api(
+        `${base}/note-columns/${target.id}`,
+        "DELETE",
+        { version: target.version },
+        viewer,
+      )
+    ).status,
+    403,
+  );
+  assert.equal(
+    (await api(`${base}/note-columns/${randomUUID()}`, "DELETE", { version: 1 }, cookie))
+      .status,
+    404,
+  );
+});
+
+test("过期版本删除返回 409，重复删除返回 404", async () => {
+  const { cookie, base } = await workspace();
+  const target = await column(base, cookie, "版本专栏");
+  await api(
+    `${base}/note-columns/${target.id}`,
+    "PATCH",
+    { name: "版本专栏改名", version: target.version },
+    cookie,
+  );
+  const stale = await api(
+    `${base}/note-columns/${target.id}`,
+    "DELETE",
+    { version: target.version },
+    cookie,
+  );
+  assert.equal(stale.status, 409);
+  assert.equal(stale.json.error.code, "VERSION_CONFLICT");
+
+  const fresh = await api(`${base}/note-columns`, "GET", undefined, cookie);
+  const current = (fresh.json.data as { id: string; version: number }[]).find(
+    (c) => c.id === target.id,
+  )!;
+  const removed = await api(
+    `${base}/note-columns/${target.id}`,
+    "DELETE",
+    { version: current.version },
+    cookie,
+  );
+  assert.equal(removed.status, 200);
+  const again = await api(
+    `${base}/note-columns/${target.id}`,
+    "DELETE",
+    { version: removed.json.data.version },
+    cookie,
+  );
+  assert.equal(again.status, 404);
+});
+
+test("删除后可用同名新建，撤销旧专栏时不能破坏名称唯一性", async () => {
+  const { cookie, base } = await workspace();
+  const target = await column(base, cookie, "重名专栏");
+  const removed = await api(
+    `${base}/note-columns/${target.id}`,
+    "DELETE",
+    { version: target.version },
+    cookie,
+  );
+  assert.equal(removed.status, 200);
+  const reused = await api(`${base}/note-columns`, "POST", { name: "重名专栏" }, cookie);
+  assert.equal(reused.status, 200, JSON.stringify(reused.json));
+
+  const restore = await api(
+    `${base}/note-columns/${target.id}/restore`,
+    "POST",
+    { version: removed.json.data.version },
+    cookie,
+  );
+  assert.equal(restore.status, 409, JSON.stringify(restore.json));
+  assert.equal(restore.json.error.code, "COLUMN_NAME_TAKEN");
+});
+
+test("专栏删除后不能单独恢复其中的备忘", async () => {
+  const { cookie, base } = await workspace();
+  const target = await column(base, cookie, "整栏删除");
+  const item = await note(base, cookie, target.id, "随栏删除");
+  const removed = await api(
+    `${base}/note-columns/${target.id}`,
+    "DELETE",
+    { version: target.version, confirm: true },
+    cookie,
+  );
+  assert.equal(removed.status, 200);
+  const list = await api(
+    `${base}/notes?columnId=${target.id}&deleted=true`,
+    "GET",
+    undefined,
+    cookie,
+  );
+  const deleted = (list.json.data as { id: string; version: number }[]).find(
+    (n) => n.id === item.id,
+  )!;
+  const restore = await api(
+    `${base}/notes/${item.id}/restore`,
+    "POST",
+    { version: deleted.version },
+    cookie,
+  );
+  assert.equal(restore.status, 404, JSON.stringify(restore.json));
+});
+
+test("专栏创建拒绝重名并限制 20 个", async () => {
+  const { cookie, base } = await workspace();
+  const duplicate = await api(
+    `${base}/note-columns`,
+    "POST",
+    { name: "事前确认" },
+    cookie,
+  );
+  assert.equal(duplicate.status, 422);
+  assert.equal(duplicate.json.error.code, "INVALID_COLUMN");
+
+  const current = (await api(`${base}/note-columns`, "GET", undefined, cookie)).json
+    .data as unknown[];
+  for (let i = current.length; i < 20; i++)
+    assert.equal(
+      (await api(`${base}/note-columns`, "POST", { name: `专栏${i}` }, cookie)).status,
+      200,
+    );
+  const overflow = await api(
+    `${base}/note-columns`,
+    "POST",
+    { name: "第二十一个" },
+    cookie,
+  );
+  assert.equal(overflow.status, 422);
+  assert.equal(overflow.json.error.code, "INVALID_COLUMN");
+});
+
+test("专栏改名与排序校验版本", async () => {
+  const { cookie, base } = await workspace();
+  const target = await column(base, cookie, "待改名");
+  const renamed = await api(
+    `${base}/note-columns/${target.id}`,
+    "PATCH",
+    { name: "已改名", version: target.version },
+    cookie,
+  );
+  assert.equal(renamed.status, 200, JSON.stringify(renamed.json));
+  assert.equal(renamed.json.data.name, "已改名");
+
+  const stale = await api(
+    `${base}/note-columns/${target.id}`,
+    "PATCH",
+    { name: "再次改名", version: target.version },
+    cookie,
+  );
+  assert.equal(stale.status, 409);
+  assert.equal(stale.json.error.code, "VERSION_CONFLICT");
+
+  const listed = (await api(`${base}/note-columns`, "GET", undefined, cookie)).json
+    .data as { id: string; version: number }[];
+  const items = [...listed].reverse().map((c) => ({ id: c.id, version: c.version }));
+  const sorted = await api(`${base}/note-columns/reorder`, "POST", { items }, cookie);
+  assert.equal(sorted.status, 200, JSON.stringify(sorted.json));
+  const after = (await api(`${base}/note-columns`, "GET", undefined, cookie)).json
+    .data as { id: string }[];
+  assert.equal(after[0]!.id, listed.at(-1)!.id);
+
+  const partial = await api(
+    `${base}/note-columns/reorder`,
+    "POST",
+    { items: [items[0]] },
+    cookie,
+  );
+  assert.equal(partial.status, 409);
+});
+
+test("专栏改名为已存在的名称时返回冲突", async () => {
+  const { cookie, base } = await workspace();
+  const target = await column(base, cookie, "普通专栏");
+  const conflict = await api(
+    `${base}/note-columns/${target.id}`,
+    "PATCH",
+    { name: "事前确认", version: target.version },
+    cookie,
+  );
+  assert.equal(conflict.status, 409);
+  assert.equal(conflict.json.error.code, "CONFLICT");
+});
