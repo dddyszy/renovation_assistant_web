@@ -1,7 +1,7 @@
 name: zhu-jia-web
 services:
   app:
-    image: zhu-jia-web:0.9.7
+    image: zhu-jia-web:0.9.8
     build: .
     init: true
     restart: unless-stopped
@@ -16,7 +16,7 @@ services:
     tmpfs:
       - /tmp:rw,noexec,nosuid,size=128m
     cap_drop: [ALL]
-    security_opt: [no-new-privileges:true]
+    security_opt: ["no-new-privileges:true"]
     stop_grace_period: 40s
     logging:
       driver: json-file

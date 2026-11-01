@@ -14,11 +14,12 @@ COPY package.json package-lock.json ./
 RUN npm ci --omit=dev --no-audit --no-fund && npm cache clean --force
 
 FROM node:24-bookworm-slim AS runtime
-ARG APP_VERSION=0.9.7
+ARG APP_VERSION=0.9.8
 LABEL org.opencontainers.image.title="筑家手记 Web" \
       org.opencontainers.image.description="家庭协作装修管理应用" \
       org.opencontainers.image.version="${APP_VERSION}"
-ENV NODE_ENV=production HOST=0.0.0.0 PORT=3001 TSX_DISABLE_CACHE=1
+ENV NODE_ENV=production HOST=0.0.0.0 PORT=3001 TSX_DISABLE_CACHE=1 \
+    DATABASE_URL=/app/data/postgres
 WORKDIR /app
 COPY --from=production-dependencies --chown=node:node /app/node_modules ./node_modules
 COPY --from=build --chown=node:node /app/package.json ./package.json
