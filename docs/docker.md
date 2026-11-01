@@ -194,15 +194,34 @@ docker compose logs --tail 100 app
 
 ## 常见问题
 
-| 现象                                     | 原因与处理                                                            |
-| ---------------------------------------- | --------------------------------------------------------------------- |
-| `DATABASE_URL is required`               | 用了 `compose.external.yaml` 但 `.env` 没写连接串                     |
-| `POSTGRES_PASSWORD is required`          | 用了 `compose.postgres.yaml` 但没设密码                               |
-| `ECONNREFUSED host.docker.internal:5433` | 数据库只监听 `127.0.0.1`，改为 `listen_addresses='*'` 并重启          |
-| `no pg_hba.conf entry`                   | 缺少 Docker 网段规则，例如 `host all all 172.16.0.0/12 scram-sha-256` |
-| `password authentication failed`         | 连接串里的密码没有 URL 编码，或数据库密码已改                         |
-| 启动后看到空库                           | 换了存储方式或数据卷，旧数据不会自动迁移                              |
-| 页面能开但写操作报来源无效               | `APP_ORIGIN` 与浏览器地址的协议、域名、端口不一致                     |
+| 现象                                           | 原因与处理                                                                               |
+| ---------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| `DATABASE_URL is required`                     | 用了 `compose.external.yaml` 但 `.env` 没写连接串                                        |
+| `POSTGRES_PASSWORD is required`                | 用了 `compose.postgres.yaml` 但没设密码                                                  |
+| `ECONNREFUSED host.docker.internal:5433`       | 数据库只监听 `127.0.0.1`，改为 `listen_addresses='*'` 并重启                             |
+| `no pg_hba.conf entry`                         | 缺少 Docker 网段规则，例如 `host all all 172.16.0.0/12 scram-sha-256`                    |
+| `password authentication failed`               | 连接串里的密码没有 URL 编码，或数据库密码已改                                            |
+| `The server does not support SSL connections`  | 连接要求 SSL 但数据库未启用：本机改用 `sslmode=disable`，并确认没有 `PGSSLMODE` 环境变量 |
+| `self-signed certificate in certificate chain` | 自签证书：改用 `sslmode=require`，或挂载 CA 后用 `verify-full`                           |
+| 启动后看到空库                                 | 换了存储方式或数据卷，旧数据不会自动迁移                                                 |
+| 页面能开但写操作报来源无效                     | `APP_ORIGIN` 与浏览器地址的协议、域名、端口不一致                                        |
+
+### SSL 连接说明
+
+`pg` 驱动会把 `sslmode=prefer` 按 `verify-full` 处理，不会自动回退到非加密连接。因此：
+
+| 数据库情况           | 建议写法               |
+| -------------------- | ---------------------- |
+| 本机或内网未启用 SSL | `?sslmode=disable`     |
+| 云数据库，证书受信任 | `?sslmode=verify-full` |
+| 自签证书，只要加密   | `?sslmode=require`     |
+
+如果容器里残留 `PGSSLMODE=prefer`，即使连接串没写 `sslmode` 也会尝试 SSL。排查命令：
+
+```bash
+docker compose -f compose.yaml -f compose.external.yaml exec app printenv PGSSLMODE
+docker compose -f compose.yaml -f compose.external.yaml config | grep -i ssl
+```
 
 从容器内测试宿主机数据库：
 
