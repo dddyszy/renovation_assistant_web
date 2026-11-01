@@ -16,20 +16,20 @@
 | 409  | 版本冲突、幂等冲突、重复邮箱、项目已归档或资源不可删除 |
 | 422  | 字段格式、金额、关联或确认信息不正确                   |
 | 429  | 请求过于频繁                                           |
-| 503  | 生产环境未配置邮件找回服务                             |
+| 503  | 生产环境不提供邮件找回服务                             |
 
 ## 账号
 
-| 方法与路径                  | 请求或返回                                                       |
-| --------------------------- | ---------------------------------------------------------------- |
-| GET `/health`               | 查询数据库，返回 status、version、localMail                      |
-| POST `/auth/register`       | `{email,password,nickname}`；不需要验证码，返回 registered       |
-| POST `/auth/login`          | `{email,password}`；设置 session Cookie，返回用户基础资料        |
-| POST `/auth/logout`         | 无请求体；撤销当前会话并清 Cookie                                |
-| POST `/auth/reset/request`  | `{email}`；邮件找回。开发未配置邮件时可返回 devToken，生产不返回 |
-| POST `/auth/reset/complete` | `{token,password}`；一次性使用，撤销该账号全部会话               |
-| GET / PATCH `/me`           | 查询个人资料或用 `{nickname}` 修改称呼                           |
-| POST `/me/preferences`      | `{familyId,projectId}`；项目可为 null，需有访问权                |
+| 方法与路径                  | 请求或返回                                                 |
+| --------------------------- | ---------------------------------------------------------- |
+| GET `/health`               | 查询数据库，返回 status、version、localMail                |
+| POST `/auth/register`       | `{email,password,nickname}`；不需要验证码，返回 registered |
+| POST `/auth/login`          | `{email,password}`；设置 session Cookie，返回用户基础资料  |
+| POST `/auth/logout`         | 无请求体；撤销当前会话并清 Cookie                          |
+| POST `/auth/reset/request`  | `{email}`；开发环境返回 devToken，生产环境返回 503         |
+| POST `/auth/reset/complete` | `{token,password}`；一次性使用，撤销该账号全部会话         |
+| GET / PATCH `/me`           | 查询个人资料或用 `{nickname}` 修改称呼                     |
+| POST `/me/preferences`      | `{familyId,projectId}`；项目可为 null，需有访问权          |
 
 注册 API 创建账号，前端随后调用登录 API 实现注册后自动进入。重复邮箱返回 `EMAIL_EXISTS`；邮箱按小写去重，密码 10–128 位。
 

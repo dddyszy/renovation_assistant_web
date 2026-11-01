@@ -8,7 +8,6 @@ import { fail, hasErrorCode } from "../lib/errors.ts";
 import { authLimit, data, digest } from "../lib/http.ts";
 import { id, insert } from "../lib/persistence.ts";
 import { email, password, required } from "../schemas.ts";
-import { sendMail } from "../services/mail.ts";
 
 export function registerAuthRoutes(
   app: FastifyInstance,
@@ -22,7 +21,7 @@ export function registerAuthRoutes(
     return data({
       status: "ok",
       version: APP_VERSION,
-      localMail: !production && !process.env.SMTP_HOST,
+      localMail: !production,
     });
   });
   app.post("/api/v1/auth/register", { config: { rateLimit: authLimit } }, async (r) => {
@@ -81,8 +80,8 @@ export function registerAuthRoutes(
     { config: { rateLimit: authLimit } },
     async (r) => {
       const b = z.object({ email }).parse(r.body);
-      if (production && !process.env.SMTP_HOST)
-        fail(503, "MAIL_NOT_CONFIGURED", "暂未开通邮件找回，请联系应用管理员");
+      if (production)
+        fail(503, "MAIL_NOT_CONFIGURED", "当前部署未开通邮件找回，请联系应用管理员");
       const [u] = await db.query("SELECT id FROM users WHERE email=$1", [b.email]);
       const token = randomBytes(32).toString("hex");
       if (u) {
@@ -93,15 +92,10 @@ export function registerAuthRoutes(
           token_hash: digest(token),
           expires_at: new Date(Date.now() + 15 * 60e3),
         });
-        await sendMail(
-          b.email,
-          "筑家手记 · 重置密码",
-          `请在 15 分钟内打开：${origin}/reset-password?token=${token}`,
-        );
       }
       return data({
         message: "如果此邮箱已注册，你将收到重置邮件",
-        ...(!production && !process.env.SMTP_HOST && u ? { devToken: token } : {}),
+        ...(!production && u ? { devToken: token } : {}),
       });
     },
   );

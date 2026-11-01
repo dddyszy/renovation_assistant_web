@@ -14,7 +14,7 @@ docker compose \
   up -d --build --wait
 ```
 
-应用从当前源码构建，数据库使用 `postgres:18-alpine`。包含本次改动的新应用镜像发布后，也可以加 `-f compose.image.yaml` 并改用 `--no-build`。完整填写规则见 [Docker 参数指南](docker-parameters.md)。
+应用从当前源码构建，数据库使用 `postgres:18-alpine`。包含本次改动的新应用镜像发布后，也可以加 `-f compose.image.yaml` 并改用 `--no-build`。完整填写规则见 [Docker 部署](docker.md)。
 
 ## 兼容 PostgreSQL 17
 
@@ -40,7 +40,7 @@ docker compose \
   up -d --build --wait
 ```
 
-填写实际的 POSTGRES_HOST、POSTGRES_PORT、POSTGRES_DB、POSTGRES_USER、POSTGRES_PASSWORD 和 POSTGRES_SSLMODE。不需要额外设置数据库版本变量，版本由外部服务器决定；应用不会替外部服务器升级数据库。
+只需在 `.env` 设置一条 `DATABASE_URL`，例如 `postgresql://zhu_jia:密码@db.example.internal:5432/zhu_jia?sslmode=verify-full`。不需要设置数据库版本变量，版本由外部服务器决定；应用不会替外部服务器升级数据库。
 
 ## 18 与 17 的目录和卷不同
 

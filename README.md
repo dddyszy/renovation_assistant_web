@@ -17,7 +17,7 @@ npm run dev
 
 ### 注册和邮件
 
-注册只需邮箱、昵称和至少 10 位密码，不需要邮箱验证码。未配置 SMTP 不影响注册登录，仅邮件找回密码不可用。生产模式必须设置浏览器入口 `APP_ORIGIN`。
+注册只需邮箱、昵称和至少 10 位密码，不需要邮箱验证码。生产模式必须设置浏览器入口 `APP_ORIGIN`；当前版本不提供邮件找回密码。
 
 ### 演示账号
 
@@ -42,11 +42,8 @@ curl --fail http://127.0.0.1:8080/api/v1/health
 # Compose PostgreSQL 18：先在 .env 设置 POSTGRES_PASSWORD。
 docker compose -f compose.yaml -f compose.postgres.yaml up -d --build --wait
 
-# 已有 PostgreSQL：先在 .env 设置完整 POSTGRES_* 连接参数。
+# 已有 PostgreSQL：先在 .env 设置 DATABASE_URL。
 docker compose -f compose.yaml -f compose.external.yaml up -d --build --wait
-
-# SMTP 密码找回：先在 .env 设置 SMTP_HOST 和 SMTP_FROM 等参数。
-docker compose -f compose.yaml -f compose.smtp.yaml up -d --build --wait
 
 # 使用已发布的 GHCR 镜像，不在服务器构建。
 docker compose -f compose.yaml -f compose.image.yaml up -d --no-build --wait
@@ -54,7 +51,7 @@ docker compose -f compose.yaml -f compose.image.yaml up -d --no-build --wait
 
 PostgreSQL 17、宿主机目录挂载和参数细节见部署文档。不要使用 `down -v` 做正常升级，它会删除数据卷。
 
-- [Docker 部署](docs/docker.md) · [参数指南](docs/docker-parameters.md) · [PostgreSQL](docs/postgresql.md)
+- [Docker 部署](docs/docker.md) · [PostgreSQL](docs/postgresql.md)
 - [容器镜像仓库](docs/container-registry.md) · [配置参考](docs/configuration.md) · [运维手册](docs/operations.md)
 
 ## 功能概览
@@ -82,7 +79,7 @@ npm run build      # 生成生产前端
 
 - 旧微信云数据尚未导入，规划见 [版本路线图](docs/roadmap.md)。
 - 文件附件、账号注销、WebSocket 实时同步和逐字段变更历史尚未实现。
-- 真实 SMTP、域名证书和目标服务器仍需各自环境验收；自动测试不能替代上线验收。
+- 真实域名、证书、数据库备份仍需各自环境验收；自动测试不能替代上线验收。
 - 初始 schema 可重复初始化，后续结构变更需要正式版本化迁移。
 
 - [产品与技术设计](docs/design.md) · [开发与验收](docs/development.md) · [完整文档目录](docs/README.md)
