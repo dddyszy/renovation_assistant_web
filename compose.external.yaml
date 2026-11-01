@@ -1,14 +1,8 @@
-# Standalone/managed PostgreSQL; no application data volume is used.
+# Optional: connect to an existing PostgreSQL with one connection string.
 services:
   app:
     environment:
-      DATABASE_URL: ""
-      PGHOST: ${POSTGRES_HOST:?Set POSTGRES_HOST for the external database}
-      PGPORT: ${POSTGRES_PORT:-5432}
-      PGDATABASE: ${POSTGRES_DB:-zhu_jia}
-      PGUSER: ${POSTGRES_USER:-zhu_jia}
-      PGPASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}
-      PGSSLMODE: ${POSTGRES_SSLMODE:-prefer}
+      DATABASE_URL: ${DATABASE_URL:?Set DATABASE_URL in .env, e.g. postgresql://user:pass@host:5432/zhu_jia?sslmode=verify-full}
     extra_hosts:
       - host.docker.internal:host-gateway
     volumes: !reset []

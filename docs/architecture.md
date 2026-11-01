@@ -11,7 +11,6 @@ flowchart LR
     E --> F{数据库适配层}
     F --> G[PGlite 持久化目录]
     F --> H[独立 PostgreSQL]
-    C --> I[可选 SMTP 密码找回]
 ```
 
 ## 前端

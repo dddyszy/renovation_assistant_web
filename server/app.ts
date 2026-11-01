@@ -16,8 +16,6 @@ import { registerStatisticsRoutes } from "./routes/statistics.ts";
 export async function createApp(db: Db, options: { testing?: boolean } = {}) {
   const production = process.env.NODE_ENV === "production";
   const origin = readAppOrigin(process.env.APP_ORIGIN, production);
-  if (process.env.SMTP_HOST && !process.env.SMTP_FROM)
-    throw new Error("配置 SMTP_HOST 后需要同时设置 SMTP_FROM");
   const app = Fastify({
     logger: options.testing
       ? false

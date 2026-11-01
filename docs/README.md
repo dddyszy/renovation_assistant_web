@@ -2,25 +2,24 @@
 
 当前版本：**0.9.9**。以下文档对应 Web 项目，原微信小程序独立保留。
 
-| 你要做什么                               | 阅读文档                                    |
-| ---------------------------------------- | ------------------------------------------- |
-| 注册、邀请家人、记账和管理装修           | [用户使用指南](user-guide.md)               |
-| 选择内置或外置存储，用 Docker 上线       | [Docker 部署](docker.md)                    |
-| 直接拉取 GitHub 镜像，或配置自动发布     | [容器镜像仓库](container-registry.md)       |
-| 查环境变量、端口和邮件配置               | [配置参考](configuration.md)                |
-| 按部署模式照着填写 .env                  | [Docker 参数填写指南](docker-parameters.md) |
-| 默认使用 PostgreSQL 18，或兼容/迁移旧 17 | [PostgreSQL 部署与升级](postgresql.md)      |
-| 备份、恢复、升级和排查异常               | [运维手册](operations.md)                   |
-| 从内置数据库切换到外部 PostgreSQL        | [存储迁移](storage-migration.md)            |
-| 理解前后端、权限和金额规则               | [架构说明](architecture.md)                 |
-| Web 与小程序备忘文件互通                 | [备忘文件交换](notes-transfer.md)           |
-| 对接接口或排查请求错误                   | [API 参考](api.md)                          |
-| 理解表关系、索引和数据生命周期           | [数据库说明](database.md)                   |
-| 目录边界、代码风格、提交与评审           | [开发与协作规范](../CONTRIBUTING.md)        |
-| 本地开发、测试和构建                     | [开发与验收](development.md)                |
-| 查看下几个版本的优先级                   | [版本路线图](roadmap.md)                    |
-| 查看当前版本交付内容                     | [更新记录](../CHANGELOG.md)                 |
-| 准备下一次发布与验收                     | [发布流程](releasing.md)                    |
-| 查看最初的产品方案                       | [设计基线](design.md)                       |
+| 你要做什么                               | 阅读文档                               |
+| ---------------------------------------- | -------------------------------------- |
+| 注册、邀请家人、记账和管理装修           | [用户使用指南](user-guide.md)          |
+| 选择内置或外置存储，用 Docker 上线       | [Docker 部署](docker.md)               |
+| 直接拉取 GitHub 镜像，或配置自动发布     | [容器镜像仓库](container-registry.md)  |
+| 查环境变量、端口和邮件配置               | [配置参考](configuration.md)           |
+| 默认使用 PostgreSQL 18，或兼容/迁移旧 17 | [PostgreSQL 部署与升级](postgresql.md) |
+| 备份、恢复、升级和排查异常               | [运维手册](operations.md)              |
+| 从内置数据库切换到外部 PostgreSQL        | [存储迁移](storage-migration.md)       |
+| 理解前后端、权限和金额规则               | [架构说明](architecture.md)            |
+| Web 与小程序备忘文件互通                 | [备忘文件交换](notes-transfer.md)      |
+| 对接接口或排查请求错误                   | [API 参考](api.md)                     |
+| 理解表关系、索引和数据生命周期           | [数据库说明](database.md)              |
+| 目录边界、代码风格、提交与评审           | [开发与协作规范](../CONTRIBUTING.md)   |
+| 本地开发、测试和构建                     | [开发与验收](development.md)           |
+| 查看下几个版本的优先级                   | [版本路线图](roadmap.md)               |
+| 查看当前版本交付内容                     | [更新记录](../CHANGELOG.md)            |
+| 准备下一次发布与验收                     | [发布流程](releasing.md)               |
+| 查看最初的产品方案                       | [设计基线](design.md)                  |
 
 “已实现”“已验证”和“计划”分别在更新记录、开发验收和路线图中说明。Docker 引擎、域名证书、邮件供应商等依赖实际部署环境的检查，不因提交了配置文件就视为上线验收完成。

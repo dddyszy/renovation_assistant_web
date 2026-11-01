@@ -598,7 +598,7 @@ test("注册无需验证码，邮箱规范化去重并保留密码强度校验",
   );
 });
 test("生产 HTTP 入口支持登录与会话，代理安全入口保留 Cookie 属性，写请求仍校验来源", async (t) => {
-  const keys = ["NODE_ENV", "APP_ORIGIN", "SMTP_HOST", "SMTP_FROM"] as const;
+  const keys = ["NODE_ENV", "APP_ORIGIN"] as const;
   const saved = Object.fromEntries(keys.map((k) => [k, process.env[k]]));
   let productionApp: Awaited<ReturnType<typeof createApp>> | undefined;
   try {
@@ -606,8 +606,6 @@ test("生产 HTTP 入口支持登录与会话，代理安全入口保留 Cookie 
     for (const protocol of ["http", "https"]) {
       await t.test(protocol, async () => {
         process.env.APP_ORIGIN = `${protocol}://zhu-jia.example.test`;
-        delete process.env.SMTP_HOST;
-        delete process.env.SMTP_FROM;
         productionApp = await createApp(db, { testing: true });
         const headers = {
           origin: `${protocol}://zhu-jia.example.test`,

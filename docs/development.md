@@ -21,14 +21,9 @@ DATABASE_URL=postgresql://USER:PASSWORD@HOST:5432/zhu_jia
 PORT=3001
 HOST=127.0.0.1
 APP_ORIGIN=http://your-domain.example
-SMTP_HOST=smtp.your-provider.example
-SMTP_PORT=587
-SMTP_USER=your-user
-SMTP_PASSWORD=your-secret
-SMTP_FROM=筑家手记 <noreply@your-domain.example>
 ```
 
-凭据仅放服务端环境变量。`SMTP_PORT=465` 使用直接 TLS，其余端口由 SMTP transport 协商。注册登录不依赖邮件服务；若启用忘记密码功能，再配置发信域名并验证重置邮件投递。
+凭据仅放服务端环境变量。当前版本不包含邮件服务，忘记密码请联系部署管理员处理。
 
 执行：
 
@@ -40,7 +35,7 @@ npm start
 
 API 服务会托管 `dist/`，并为前端深链接返回 index.html，未知 API 返回 JSON 404。服务器现有反向代理将整个站点转发到该服务。Cookie 始终采用 HttpOnly + SameSite=Lax，Secure 属性由 APP_ORIGIN 的协议决定，错误的 Origin 和缺失应用请求头的写请求会被拒绝。若修改公网域名，必须同步更新 `APP_ORIGIN`。
 
-上线采用生产启动脚本，生产检查要求显式设置有效的 `APP_ORIGIN`，允许普通 HTTP 入口。SMTP 为可选项；配置 `SMTP_HOST` 时必须同时配置 `SMTP_FROM`。未开通 SMTP 的生产环境会明确提示邮件找回暂不可用，不返回本地重置链接。演示账号和开发数据使用独立数据库。
+上线采用生产启动脚本，生产检查要求显式设置有效的 `APP_ORIGIN`，允许普通 HTTP 入口。生产环境不提供自助找回密码，开发环境会返回本地重置链接便于测试。演示账号和开发数据使用独立数据库。
 
 ## 数据备份
 

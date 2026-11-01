@@ -51,13 +51,13 @@ docker pull ghcr.io/dddyszy/renovation_assistant_web:0.9.9
 
 0.9.9 镜像尚未发布时请按 [Docker 部署](docker.md) 从源码构建；以下拉取命令以对应镜像发布成功为前提。
 
-部署前填写哪些参数、哪些可以留空，见 [Docker 参数填写指南](docker-parameters.md)。
+部署前需要设置哪些变量，见 [Docker 部署](docker.md)。
 
 服务器只需复制选用的 Compose 配置和 `.env.example`，无需上传源代码和 node_modules。
 
 ```bash
 cp .env.example .env
-# 编辑 APP_ORIGIN；外部/自带 PostgreSQL 时同时填写数据库变量。
+# 编辑 APP_ORIGIN；连接已有 PostgreSQL 时填写 DATABASE_URL。
 ```
 
 内置数据库：

@@ -1,26 +1,54 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
+import { randomUUID } from "node:crypto";
 import { createApp } from "../server/app.ts";
 import { createDb } from "../server/db.ts";
 
-test("配置 SMTP_HOST 时必须同时提供 SMTP_FROM", async () => {
-  const saved = { host: process.env.SMTP_HOST, from: process.env.SMTP_FROM };
+const headers = { origin: "http://localhost:5173", "x-requested-with": "zhu-jia-web" };
+
+test("生产环境不提供邮件找回，开发环境返回本地重置链接", async () => {
+  const saved = { nodeEnv: process.env.NODE_ENV, origin: process.env.APP_ORIGIN };
   const db = await createDb("memory://");
   try {
-    process.env.SMTP_HOST = "smtp.example.test";
-    delete process.env.SMTP_FROM;
-    await assert.rejects(() => createApp(db, { testing: true }), /SMTP_FROM/);
+    process.env.NODE_ENV = "production";
+    process.env.APP_ORIGIN = "http://localhost:5173";
+    const production = await createApp(db, { testing: true });
+    const blocked = await production.inject({
+      method: "POST",
+      url: "/api/v1/auth/reset/request",
+      headers,
+      payload: { email: "nobody@example.test" },
+    });
+    assert.equal(blocked.statusCode, 503);
+    assert.equal(blocked.json().error.code, "MAIL_NOT_CONFIGURED");
+    await production.close();
 
-    process.env.SMTP_FROM = "筑家手记 <noreply@example.test>";
-    const app = await createApp(db, { testing: true });
-    const health = await app.inject({ method: "GET", url: "/api/v1/health" });
-    assert.equal(health.statusCode, 200);
-    await app.close();
+    process.env.NODE_ENV = "test";
+    const development = await createApp(db, { testing: true });
+    const credentials = {
+      email: `${randomUUID()}@reset.test`,
+      password: "ResetTest!123",
+    };
+    await development.inject({
+      method: "POST",
+      url: "/api/v1/auth/register",
+      headers,
+      payload: { ...credentials, nickname: "找回测试" },
+    });
+    const reset = await development.inject({
+      method: "POST",
+      url: "/api/v1/auth/reset/request",
+      headers,
+      payload: { email: credentials.email },
+    });
+    assert.equal(reset.statusCode, 200, reset.body);
+    assert.equal(typeof reset.json().data.devToken, "string");
+    await development.close();
   } finally {
-    if (saved.host === undefined) delete process.env.SMTP_HOST;
-    else process.env.SMTP_HOST = saved.host;
-    if (saved.from === undefined) delete process.env.SMTP_FROM;
-    else process.env.SMTP_FROM = saved.from;
+    if (saved.nodeEnv === undefined) delete process.env.NODE_ENV;
+    else process.env.NODE_ENV = saved.nodeEnv;
+    if (saved.origin === undefined) delete process.env.APP_ORIGIN;
+    else process.env.APP_ORIGIN = saved.origin;
     await db.close();
   }
 });

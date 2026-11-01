@@ -45,8 +45,8 @@ jobs:
         storage: [embedded, postgres, postgres17]
     env:
       APP_ORIGIN: http://renovation.example.test
-      POSTGRES_HOST: external.example.test
       POSTGRES_PASSWORD: "ci:test@password/with%characters#"
+      DATABASE_URL: postgresql://zhu_jia:ci%3Atest%40password@external.example.test:5432/zhu_jia?sslmode=disable
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -59,7 +59,6 @@ jobs:
           docker compose -f compose.yaml -f compose.postgres.yaml config --quiet
           docker compose -f compose.yaml -f compose.postgres17.yaml config --quiet
           DATA_DIR=/tmp/zhu-jia docker compose -f compose.yaml -f compose.bind.yaml config --quiet
-          SMTP_HOST=smtp.example.test SMTP_FROM='CI <ci@example.test>' docker compose -f compose.yaml -f compose.smtp.yaml config --quiet
           docker compose -f compose.yaml -f compose.image.yaml config --quiet
       - name: Build and start
         run: |
