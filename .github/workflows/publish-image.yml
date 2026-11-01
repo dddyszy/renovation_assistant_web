@@ -123,20 +123,36 @@ jobs:
           done
           test "${#images[@]}" -eq 2
           docker buildx imagetools create -t "$IMAGE:sha-$SOURCE_SHA" "${images[@]}"
+
   verify:
     needs: [prepare, candidate]
     strategy:
       matrix:
-        storage: [embedded, postgres, postgres17]
+        include:
+          - storage: embedded
+            postgres: 18
+          - storage: external
+            postgres: 18
+          - storage: external
+            postgres: 17
     runs-on: ubuntu-latest
     permissions:
       contents: read
       packages: read
+    services:
+      postgres:
+        image: postgres:${{ matrix.postgres }}-alpine
+        env:
+          POSTGRES_DB: zhu_jia_ci
+          POSTGRES_USER: zhu_jia
+          POSTGRES_PASSWORD: ci-test-password
+        ports: ["5432:5432"]
+        options: --health-cmd "pg_isready -U zhu_jia -d zhu_jia_ci" --health-interval 5s --health-timeout 5s --health-retries 20
     env:
       APP_ORIGIN: http://renovation.example.test
       APP_IMAGE: ${{ needs.prepare.outputs.image }}
       APP_IMAGE_TAG: sha-${{ needs.prepare.outputs.source_sha }}
-      POSTGRES_PASSWORD: "ci:test@password/with%characters#"
+      DATABASE_URL: postgresql://zhu_jia:ci-test-password@host.docker.internal:5432/zhu_jia_ci?sslmode=disable
     steps:
       # Deployment definitions belong to the workflow revision; application code is pinned above.
       - uses: actions/checkout@v4
@@ -151,9 +167,13 @@ jobs:
       - name: Pull and start the candidate image
         run: |
           files=(-f compose.yaml -f compose.image.yaml)
-          if [ '${{ matrix.storage }}' = postgres ]; then files+=(-f compose.postgres.yaml); fi
-          if [ '${{ matrix.storage }}' = postgres17 ]; then files+=(-f compose.postgres17.yaml); fi
+          if [ '${{ matrix.storage }}' = external ]; then files+=(-f compose.external.yaml); fi
           docker compose "${files[@]}" up -d --no-build --wait --wait-timeout 180
+      - name: Verify PostgreSQL major version
+        if: matrix.storage == 'external'
+        run: |
+          version=$(PGPASSWORD=ci-test-password psql -h 127.0.0.1 -p 5432 -U zhu_jia -d zhu_jia_ci -Atc "SHOW server_version_num")
+          test "$((version / 10000))" -eq "${{ matrix.postgres }}"
       - run: node scripts/docker-smoke.mjs
         env:
           SMOKE_ALLOW_WRITE: "yes"
@@ -161,10 +181,17 @@ jobs:
           SMOKE_EXPECTED_VERSION: ${{ needs.prepare.outputs.version }}
       - name: Diagnostics
         if: failure()
-        run: docker compose -f compose.yaml -f compose.image.yaml -f compose.postgres.yaml -f compose.postgres17.yaml logs --tail 100
+        run: |
+          files=(-f compose.yaml -f compose.image.yaml)
+          if [ '${{ matrix.storage }}' = external ]; then files+=(-f compose.external.yaml); fi
+          docker compose "${files[@]}" logs --tail 100
       - name: Cleanup disposable CI data
         if: always()
-        run: docker compose -f compose.yaml -f compose.image.yaml -f compose.postgres.yaml -f compose.postgres17.yaml down -v --remove-orphans
+        run: |
+          files=(-f compose.yaml -f compose.image.yaml)
+          if [ '${{ matrix.storage }}' = external ]; then files+=(-f compose.external.yaml); fi
+          docker compose "${files[@]}" down -v --remove-orphans
+
   publish:
     needs: [prepare, verify]
     runs-on: ubuntu-latest

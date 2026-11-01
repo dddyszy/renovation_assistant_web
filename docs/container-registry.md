@@ -73,14 +73,6 @@ docker compose -f compose.yaml -f compose.image.yaml up -d --no-build --wait
 docker compose -f compose.yaml -f compose.image.yaml -f compose.external.yaml up -d --no-build --wait
 ```
 
-随 Compose 启动 PostgreSQL：
-
-```bash
-docker compose -f compose.yaml -f compose.image.yaml -f compose.postgres.yaml up -d --no-build --wait
-```
-
-上述命令默认使用 PostgreSQL 18。需要兼容 17 时将数据库配置换成 `-f compose.postgres17.yaml`，应用镜像地址不变。已有数据库跨主版本升级需迁移数据，见 [PostgreSQL 说明](postgresql.md)。
-
 服务器现有代理转发到 `127.0.0.1:8080`，内置数据目录挂载可叠加 `compose.bind.yaml`，规则见 [Docker 部署](docker.md)。`compose.image.yaml` 删除 build 配置并启用镜像拉取，服务器不会构建。
 
 ## 不用 Compose 的内置模式示例
@@ -95,7 +87,7 @@ docker run -d --name zhu-jia --init --restart unless-stopped \
   ghcr.io/dddyszy/renovation_assistant_web:0.9.9
 ```
 
-将服务器现有站点代理到该端口，APP_ORIGIN 填浏览器实际访问的入口。数据保存在命名卷，替换容器不删除数据库。镜像已内置 `DATABASE_URL=/app/data/postgres`，上面这条内置模式命令可以省略该变量；连接外部 PostgreSQL 时必须显式传 `-e DATABASE_URL= -e PGHOST=...`（空值清除默认目录）或直接传 `postgresql://` 连接串。
+将服务器现有站点代理到该端口，APP_ORIGIN 填浏览器实际访问的入口。数据保存在命名卷，替换容器不删除数据库。镜像已内置 `DATABASE_URL=/app/data/postgres`，上面这条内置模式命令可以省略该变量；连接外部 PostgreSQL 时直接传 `postgresql://` 连接串即可。
 
 ## 升级与定位问题
 

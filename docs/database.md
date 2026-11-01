@@ -2,7 +2,7 @@
 
 版本：0.9.9。表结构与索引的实际来源为 `server/schema.sql`，PGlite 和 PostgreSQL 使用相同业务表。
 
-完整 PostgreSQL 部署默认使用 18，兼容 17；外置服务也支持这两个主版本。默认与兼容配置分别为 compose.postgres.yaml、compose.postgres17.yaml，数据布局与升级方式见 [PostgreSQL 部署说明](postgresql.md)。
+外置 PostgreSQL 推荐 18，兼容 17；应用不管理数据库版本，连接方式见 [外置 PostgreSQL](postgresql.md)。
 
 ## 表关系
 

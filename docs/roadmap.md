@@ -30,7 +30,7 @@
 
 ## 0.9.7 已交付范围
 
-默认只需复制 `.env.example` 为 `.env`、设置 `APP_ORIGIN`，再执行 `docker compose up -d --build --wait`；外部 PostgreSQL、Compose PostgreSQL、目录挂载和预构建镜像均为显式可选配置。
+默认只需复制 `.env.example` 为 `.env`、设置 `APP_ORIGIN`，再执行 `docker compose up -d --build --wait`；外置 PostgreSQL、目录挂载和预构建镜像均为显式可选配置。
 
 ## 0.9.6 已交付范围
 

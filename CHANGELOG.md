@@ -7,6 +7,8 @@
 - 新增专栏删除、非空保护与撤销恢复的接口回归测试。
 - 外部 PostgreSQL 改为单条 `DATABASE_URL`，不再需要 POSTGRES_HOST/PORT/DB/USER/SSLMODE。
 - 移除全部 SMTP 配置与邮件服务依赖，生产环境不再提供自助找回密码；开发环境保留本地重置链接。
+- 移除 Compose 自带 PostgreSQL 配置，只保留内置 PGlite 与外置 PostgreSQL；CI 改用 PostgreSQL 18/17 服务容器验证。
+- 备份脚本改为直接读取 `DATABASE_URL`，不再依赖数据库容器。
 - 合并 Docker 参数文档到部署文档，删除重复的参数表。
 - 应用、镜像和发布流程版本统一为 0.9.9。
 

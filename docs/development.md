@@ -8,7 +8,7 @@
 
 `npm run dev` 同时启动 Vite 与 Fastify。浏览器的 `/api/v1` 请求由 Vite 转发到本机 3001 端口。写请求必须携带同源 Origin 和应用请求头；开发环境允许本机及局域网的 5173 端口，未开放跨域 CORS。
 
-默认开发数据库是 `.data/postgres` 中的 PGlite。它运行 PostgreSQL 引擎并将数据落盘，适合本地与单进程体验。设置 `DATABASE_URL=postgresql://...`，或清空该变量并设置 PGHOST 等 PG 环境变量后，改用 pg 连接独立 PostgreSQL；两个适配器共用同一份 SQL schema。完整 PostgreSQL 部署默认使用 18，兼容 17；两种版本均已通过 CI 接口与容器验证，见 [PostgreSQL 部署说明](postgresql.md)。实际服务器的网络、权限和 TLS 仍需验证。
+默认开发数据库是 `.data/postgres` 中的 PGlite。它运行 PostgreSQL 引擎并将数据落盘，适合本地与单进程体验。设置 `DATABASE_URL=postgresql://...`，或清空该变量并设置 PGHOST 等 PG 环境变量后，改用 pg 连接独立 PostgreSQL；两个适配器共用同一份 SQL schema。外置 PostgreSQL 推荐 18，兼容 17；两种版本均通过 CI 接口验证，见 [外置 PostgreSQL](postgresql.md)。实际服务器的网络、权限和 TLS 仍需验证。
 
 初次启动自动创建表和索引。`.data`、`.env`、截图和 node_modules 已加入 `.gitignore`。请勿删除 `.data` 来“重置页面”，这会删除本地用户数据。
 
@@ -73,7 +73,7 @@ API 服务会托管 `dist/`，并为前端深链接返回 index.html，未知 AP
 - 外置存储：本机临时独立 PostgreSQL 17 集群验证同一套 API；通过 PG 环境变量传递含特殊字符的密码，无需拼 URL。
 - PostgreSQL 18 / 17：CI 分别验证真实服务版本、API 与迁移；已发布的 0.9.5 镜像分别通过两种版本的容器重建持久化、记账接口和备份恢复验证，运行记录见 [PostgreSQL 部署说明](postgresql.md#备份与验证)。
 - 存储切换：已验证 PGlite 到临时独立 PostgreSQL 17 的迁移；目标金额、JSON 描述、偏好及软删除一致，且不会复制登录会话或覆盖已使用的目标库。
-- Compose：使用官方 Compose CLI 检查内置、外置、自带 PostgreSQL、目录挂载组合，确认数据库模式不误挂内置卷。
+- Compose：使用官方 Compose CLI 检查内置、外置 PostgreSQL、目录挂载和预构建镜像组合。
 - 浏览器：在本地内置浏览器使用虚构演示账号验证登录、首页、材料关联付款、软删除/恢复/即时撤销、备忘编辑、家庭与项目切换；检查 360px/390px/1440px 宽度。截图存放于本机 artifacts，未纳入源码。
 - 小程序参考：使用现有微信开发者工具读取并截图首页，参考其配色、预算卡片、阶段与底部导航，没有调用原项目写入测试。
 

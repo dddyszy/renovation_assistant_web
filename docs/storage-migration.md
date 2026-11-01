@@ -71,7 +71,7 @@ docker run --rm --env-file .env.migrate \
   zhu-jia-web:0.9.9 node --import tsx scripts/migrate-storage.ts --apply
 ```
 
-如果目标是同 Compose 的 `db` 服务，先只启动 db，并给临时迁移容器增加 `--network zhu-jia-web_default`，PGHOST 使用 db，PGSSLMODE 使用 disable。目标在宿主机时，另加 `--add-host host.docker.internal:host-gateway`，不要把 PGHOST 填成容器自身的 localhost。
+目标在宿主机时，给临时迁移容器加 `--add-host host.docker.internal:host-gateway`，PGHOST 填 `host.docker.internal`，不要填容器自身的 localhost。目标是远程数据库时直接填其域名。
 
 迁移容器需要源数据卷的写入权限，供数据库引擎打开与正常关闭文件；业务查询仍在只读事务中。不要在迁移运行时重启原应用。
 
