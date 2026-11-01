@@ -1338,3 +1338,40 @@
     letter-spacing: -0.3px;
   }
 }
+
+@media (max-width: 767px) {
+  .notes-toolbar {
+    align-items: center;
+  }
+  .note-card header {
+    align-items: flex-start;
+    flex-wrap: nowrap;
+  }
+  .note-star {
+    flex: 0 0 auto;
+    margin-top: 2px;
+  }
+  .note-title {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+  .note-card header .pill {
+    flex: 0 0 auto;
+    align-self: flex-start;
+    white-space: nowrap;
+  }
+  .filter-row select {
+    appearance: auto;
+    flex: 1 1 calc(50% - 5px);
+    min-width: 120px;
+    max-width: none;
+    background: #fffdf9;
+    color: #3f3428;
+    font-size: 16px;
+  }
+  .filter-row select option {
+    background: #fffdf9;
+    color: #3f3428;
+    font-size: 16px;
+  }
+}
