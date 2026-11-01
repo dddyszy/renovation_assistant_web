@@ -1,6 +1,6 @@
 # 内置与外置存储迁移
 
-适用版本：0.9.8。`scripts/migrate-storage.ts` 用于本 Web 应用的 PGlite 与 PostgreSQL 之间复制账号和业务数据，可以双向迁移。它不处理原微信云开发集合，微信身份映射另见设计与路线图。
+适用版本：0.9.9。`scripts/migrate-storage.ts` 用于本 Web 应用的 PGlite 与 PostgreSQL 之间复制账号和业务数据，可以双向迁移。它不处理原微信云开发集合，微信身份映射另见设计与路线图。
 
 ## 工具边界
 
@@ -64,11 +64,11 @@ PGSSLMODE=verify-full
 ```bash
 docker run --rm --env-file .env.migrate \
   -v zhu-jia-web_app_data:/app/data \
-  zhu-jia-web:0.9.8 node --import tsx scripts/migrate-storage.ts
+  zhu-jia-web:0.9.9 node --import tsx scripts/migrate-storage.ts
 
 docker run --rm --env-file .env.migrate \
   -v zhu-jia-web_app_data:/app/data \
-  zhu-jia-web:0.9.8 node --import tsx scripts/migrate-storage.ts --apply
+  zhu-jia-web:0.9.9 node --import tsx scripts/migrate-storage.ts --apply
 ```
 
 如果目标是同 Compose 的 `db` 服务，先只启动 db，并给临时迁移容器增加 `--network zhu-jia-web_default`，PGHOST 使用 db，PGSSLMODE 使用 disable。目标在宿主机时，另加 `--add-host host.docker.internal:host-gateway`，不要把 PGHOST 填成容器自身的 localhost。

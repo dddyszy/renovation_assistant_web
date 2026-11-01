@@ -393,8 +393,10 @@ async function remove() {
       column: "note-columns",
     };
     const path = `${w.base}/${map[w.modal]}/${w.editing!.id}`;
+    // The second click already confirms; columns also delete their notes (restorable).
     const { data } = await request<VersionedRecord>(path, "DELETE", {
       version: w.editing!.version,
+      ...(w.modal === "column" ? { confirm: true } : {}),
     });
     await refresh();
     w.notify("记录已删除", async () => {
@@ -937,7 +939,11 @@ function copyPrevious() {
               @click="remove"
             >
               <Trash2 :size="16" />{{
-                deleteConfirm ? "再次点击确认删除" : "删除"
+                deleteConfirm
+                  ? w.modal === "column"
+                    ? "再次点击确认删除专栏及备忘"
+                    : "再次点击确认删除"
+                  : "删除"
               }}</button
             ><span v-else class="save-hint">{{
               w.modal === "cost" && !w.editing?.id ? "未提交内容会自动保存为本机草稿" : ""

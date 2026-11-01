@@ -1,4 +1,4 @@
-name: Verify 0.9.8
+name: Verify 0.9.9
 on:
   push:
     branches: [main]
@@ -71,7 +71,7 @@ jobs:
           docker compose "${files[@]}" up -d --build --wait --wait-timeout 180
       - name: Verify image version and runtime user
         run: |
-          test "$(docker image inspect zhu-jia-web:0.9.8 --format '{{ index .Config.Labels "org.opencontainers.image.version" }}')" = 0.9.8
+          test "$(docker image inspect zhu-jia-web:0.9.9 --format '{{ index .Config.Labels "org.opencontainers.image.version" }}')" = 0.9.9
           test "$(docker compose exec -T app id -u)" = 1000
       - name: Verify image defaults without DATABASE_URL
         if: matrix.storage == 'embedded'
@@ -82,12 +82,12 @@ jobs:
             -v zhu-jia-defaults-data:/app/data \
             -e APP_ORIGIN=http://127.0.0.1:18080 \
             -p 127.0.0.1:18080:3001 \
-            zhu-jia-web:0.9.8
+            zhu-jia-web:0.9.9
           for attempt in {1..40}; do
             if curl --fail --silent http://127.0.0.1:18080/api/v1/health -o /tmp/health.json; then break; fi
             sleep 2
           done
-          node -e "const h = require('/tmp/health.json'); if (h.data.status !== 'ok' || h.data.version !== '0.9.8') process.exit(1)"
+          node -e "const h = require('/tmp/health.json'); if (h.data.status !== 'ok' || h.data.version !== '0.9.9') process.exit(1)"
       - run: node scripts/docker-smoke.mjs
         env:
           SMOKE_ALLOW_WRITE: "yes"

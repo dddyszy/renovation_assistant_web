@@ -149,7 +149,9 @@ export function registerRecordsRoutes(app: FastifyInstance, context: RequestCont
     });
   }
   for (const table of ["costs", "materials", "stages", "notes", "note_columns"]) {
-    app.delete(`${scope}/${table}/:rid`, { preHandler: project }, async (r) => {
+    // API paths use kebab-case while the database keeps snake_case table names.
+    const path = table === "note_columns" ? "note-columns" : table;
+    app.delete(`${scope}/${path}/:rid`, { preHandler: project }, async (r) => {
       allow(r, table === "stages" ? ["owner", "admin"] : undefined);
       const b = z.object({ version, confirm: z.boolean().optional() }).parse(r.body);
       return data(
@@ -171,27 +173,36 @@ export function registerRecordsRoutes(app: FastifyInstance, context: RequestCont
             if (n!.count && !b.confirm)
               fail(409, "COLUMN_NOT_EMPTY", "专栏仍有备忘，请先移走或删除其中的备忘");
           }
+          const deletedAt = new Date();
           const next = await update(tx, table, row.id, r.familyId, b.version, {
-            deleted_at: new Date(),
+            deleted_at: deletedAt,
             updated_by: r.user.id,
           });
           if (table === "note_columns")
             await tx.query(
-              "UPDATE notes SET deleted_at=now(),version=version+1 WHERE column_id=$1 AND deleted_at IS NULL",
-              [row.id],
+              "UPDATE notes SET deleted_at=$1,version=version+1,updated_at=now() WHERE column_id=$2 AND deleted_at IS NULL",
+              [deletedAt, row.id],
             );
           await audit(tx, r, "删除记录", table, row.id, row.name || row.title);
           return next;
         }),
       );
     });
-    app.post(`${scope}/${table}/:rid/restore`, { preHandler: project }, async (r) => {
+    app.post(`${scope}/${path}/:rid/restore`, { preHandler: project }, async (r) => {
       allow(r, table === "stages" ? ["owner", "admin"] : undefined);
       const b = z.object({ version }).parse(r.body);
       return data(
         await writeTransaction(r, async (tx) => {
           const row = await resource(tx, r, table, param(r, "rid"), true);
           if (table === "notes") await resource(tx, r, "note_columns", row.columnId);
+          if (table === "note_columns") {
+            const [conflict] = await tx.query(
+              "SELECT id FROM note_columns WHERE project_id=$1 AND name=$2 AND deleted_at IS NULL",
+              [r.project.id, row.name],
+            );
+            if (conflict)
+              fail(409, "COLUMN_NAME_TAKEN", "已有同名专栏，请先改名后再撤销删除");
+          }
           if (table === "costs" && row.materialId) {
             const [m] = await tx.query("SELECT stage_id FROM materials WHERE id=$1", [
               row.materialId,
@@ -203,6 +214,12 @@ export function registerRecordsRoutes(app: FastifyInstance, context: RequestCont
             updated_by: r.user.id,
             ...(table === "costs" ? { stage_id: row.stageId } : {}),
           });
+          // Restore the notes removed together with their column in the same operation.
+          if (table === "note_columns")
+            await tx.query(
+              "UPDATE notes SET deleted_at=NULL,version=version+1,updated_at=now() WHERE column_id=$1 AND deleted_at=$2",
+              [row.id, row.deletedAt],
+            );
           await audit(tx, r, "恢复记录", table, row.id, row.name || row.title);
           return next;
         }),
