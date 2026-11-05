@@ -1,6 +1,6 @@
 # Optional: pull a prebuilt GHCR image instead of building from source.
 services:
   app:
-    image: ${APP_IMAGE:-ghcr.io/dddyszy/renovation_assistant_web}:${APP_IMAGE_TAG:-0.9.11}
+    image: ${APP_IMAGE:-ghcr.io/dddyszy/renovation_assistant_web}:${APP_IMAGE_TAG:-0.9.12}
     build: !reset null
     pull_policy: always
