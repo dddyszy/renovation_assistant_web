@@ -896,7 +896,7 @@ function copyPrevious() {
                   <textarea
                     v-model="form.details[i - 1]"
                     rows="3"
-                    maxlength="200"
+                    maxlength="1000"
                     :placeholder="
                       i === 1 ? '例如：咖啡机和洗碗机各留一个插座' : '再写一条要点'
                     "

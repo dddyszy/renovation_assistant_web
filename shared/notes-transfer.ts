@@ -105,7 +105,7 @@ export function parseNotesArchive(input: unknown): NotesArchive {
       return {
         title: text(note.title, "备忘标题", 60),
         details: note.details
-          .map((value) => text(value, "具体描述", 200, false))
+          .map((value) => text(value, "具体描述", 1000, false))
           .filter(Boolean),
         starred: note.starred,
         status: note.status,

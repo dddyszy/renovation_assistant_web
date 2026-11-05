@@ -61,7 +61,7 @@ export const costSchema = z.object({
 export const noteSchema = z.object({
   title: required(60),
   columnId: required(),
-  details: z.array(text(200)).max(20).default([]),
+  details: z.array(text(1000)).max(20).default([]),
   starred: z.boolean().default(false),
   status: z.enum(["pending", "confirmed"]).default("pending"),
 });

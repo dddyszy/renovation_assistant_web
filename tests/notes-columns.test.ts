@@ -184,6 +184,36 @@ test("非空专栏需确认删除，撤销时只恢复随专栏删除的备忘",
   );
   assert.equal(multiline.status, 200, JSON.stringify(multiline.json));
   assert.deepEqual(multiline.json.data.details, ["第一段\n第二段", "另一个要点"]);
+
+  const longDetail = "长".repeat(900);
+  const longNote = await api(
+    `${base}/notes`,
+    "POST",
+    {
+      title: "长要点",
+      columnId: target.id,
+      details: [longDetail],
+      starred: false,
+      status: "pending",
+    },
+    cookie,
+  );
+  assert.equal(longNote.status, 200, JSON.stringify(longNote.json));
+  assert.equal((longNote.json.data.details as string[])[0]!.length, 900);
+
+  const tooLong = await api(
+    `${base}/notes`,
+    "POST",
+    {
+      title: "超长要点",
+      columnId: target.id,
+      details: ["长".repeat(1001)],
+      starred: false,
+      status: "pending",
+    },
+    cookie,
+  );
+  assert.equal(tooLong.status, 422);
 });
 
 async function account(nickname: string) {
