@@ -169,6 +169,21 @@ test("非空专栏需确认删除，撤销时只恢复随专栏删除的备忘",
     (stillDeleted.json.data as { id: string }[]).map((n) => n.id),
     [earlier.id],
   );
+
+  const multiline = await api(
+    `${base}/notes`,
+    "POST",
+    {
+      title: "多行描述",
+      columnId: target.id,
+      details: ["第一段\n第二段", "另一个要点"],
+      starred: false,
+      status: "pending",
+    },
+    cookie,
+  );
+  assert.equal(multiline.status, 200, JSON.stringify(multiline.json));
+  assert.deepEqual(multiline.json.data.details, ["第一段\n第二段", "另一个要点"]);
 });
 
 async function account(nickname: string) {
