@@ -182,11 +182,14 @@ watch(
           };
     else if (type === "note")
       form.value = e
-        ? { ...e, detailText: (e.details || []).join("\n") }
+        ? {
+            ...e,
+            details: e.details?.length ? [...e.details] : [""],
+          }
         : {
             title: "",
             columnId: columns.data.value?.data?.[0]?.id || "",
-            detailText: "",
+            details: [""],
             starred: false,
             status: "pending",
           };
@@ -339,11 +342,11 @@ async function save() {
         resource = "notes";
         payload = {
           ...f,
-          details: String(f.detailText || "")
-            .split("\n")
-            .map((s) => s.trim())
+          details: (Array.isArray(f.details) ? f.details : [])
+            .map((d: string) => String(d).trim())
             .filter(Boolean),
         };
+        delete payload.detailText;
       }
       if (type === "column") {
         resource = "note-columns";
@@ -883,14 +886,40 @@ function copyPrevious() {
                     {{ c.name }}
                   </option>
                 </select></label
-              ><label class="field"
-                >具体描述 <span class="optional">每行一条，最多 20 条</span
-                ><textarea
-                  v-model="form.detailText"
-                  rows="5"
-                  placeholder="咖啡机、洗碗机各留一个插座&#10;台面高度和家人确认"
-                /></label
-              ><label class="checkbox-line"
+              >
+              <div class="field note-details-field">
+                <span
+                  >具体描述
+                  <span class="optional">回车换行；最多 20 条要点，用按钮新增</span></span
+                >
+                <div v-for="i in form.details.length" :key="i" class="note-detail-row">
+                  <textarea
+                    v-model="form.details[i - 1]"
+                    rows="3"
+                    maxlength="200"
+                    :placeholder="
+                      i === 1 ? '例如：咖啡机和洗碗机各留一个插座' : '再写一条要点'
+                    "
+                  />
+                  <button
+                    v-if="form.details.length > 1"
+                    type="button"
+                    class="text-btn danger note-detail-remove"
+                    @click="form.details.splice(i - 1, 1)"
+                  >
+                    删除本条
+                  </button>
+                </div>
+                <button
+                  v-if="form.details.length < 20"
+                  type="button"
+                  class="btn secondary small-btn note-detail-add"
+                  @click="form.details.push('')"
+                >
+                  ＋ 新增要点
+                </button>
+              </div>
+              <label class="checkbox-line"
                 ><input v-model="form.starred" type="checkbox" />标记为重点</label
               ><label class="field"
                 >确认状态<select v-model="form.status">

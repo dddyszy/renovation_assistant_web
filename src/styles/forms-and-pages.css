@@ -958,6 +958,9 @@
   color: #a18b6b;
   line-height: 2;
 }
+.note-card ul li {
+  white-space: pre-line;
+}
 .note-card footer {
   color: #b4a182;
   font-size: 9px;
@@ -996,6 +999,25 @@
 .note-view li {
   margin-bottom: 6px;
   overflow-wrap: anywhere;
+  white-space: pre-line;
+}
+.note-details-field {
+  gap: 10px;
+}
+.note-detail-row {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.note-detail-row textarea {
+  width: 100%;
+}
+.note-detail-remove {
+  align-self: flex-end;
+  font-size: 10px;
+}
+.note-detail-add {
+  align-self: flex-start;
 }
 .note-view-empty {
   color: #b4a182;
