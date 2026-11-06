@@ -24,8 +24,10 @@ const w = useWorkspace(),
   route = useRoute(),
   router = useRouter(),
   client = useQueryClient();
-const publicPage = computed(() =>
-  ["/login", "/register", "/reset-password"].includes(route.path),
+const publicPage = computed(
+  () =>
+    ["/login", "/register", "/reset-password"].includes(route.path) ||
+    route.path.startsWith("/share/note/"),
 );
 const nav = [
   { path: "/", label: "装修总览", icon: LayoutDashboard },

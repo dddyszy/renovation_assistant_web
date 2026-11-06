@@ -23,7 +23,9 @@ const w = useWorkspace(),
   keepAdding = ref(false),
   localMessage = ref(""),
   panel = ref<HTMLElement>(),
-  deleteConfirm = ref(false);
+  deleteConfirm = ref(false),
+  shareUrl = ref(""),
+  shareBusy = ref(false);
 const stages = useProjectQuery("stages"),
   columns = useProjectQuery("note-columns");
 const viewColumn = computed(
@@ -107,6 +109,7 @@ watch(
   async (type) => {
     error.value = "";
     deleteConfirm.value = false;
+    shareUrl.value = "";
     localMessage.value = "";
     busy.value = false;
     if (!type) return;
@@ -385,6 +388,48 @@ async function save() {
     busy.value = false;
   }
 }
+async function createShare() {
+  if (!w.editing?.id) return;
+  shareBusy.value = true;
+  error.value = "";
+  try {
+    const { data } = await request<{ path: string }>(
+      `${w.base}/notes/${w.editing.id}/share`,
+      "POST",
+      {},
+    );
+    shareUrl.value = new URL(data.path, window.location.origin).toString();
+  } catch (e) {
+    error.value = errorMessage(e);
+  } finally {
+    shareBusy.value = false;
+  }
+}
+function focusShare(event: Event) {
+  (event.target as HTMLInputElement).select();
+}
+async function copyShare() {
+  try {
+    await navigator.clipboard.writeText(shareUrl.value);
+    w.notify("分享链接已复制");
+  } catch {
+    document.querySelector<HTMLInputElement>(".share-link input")?.select();
+    w.notify("请手动复制链接");
+  }
+}
+async function stopShare() {
+  if (!w.editing?.id) return;
+  shareBusy.value = true;
+  try {
+    await request(`${w.base}/notes/${w.editing.id}/share`, "DELETE", {});
+    shareUrl.value = "";
+    w.notify("已停止分享");
+  } catch (e) {
+    error.value = errorMessage(e);
+  } finally {
+    shareBusy.value = false;
+  }
+}
 async function remove() {
   if (!deleteConfirm.value) {
     deleteConfirm.value = true;
@@ -564,6 +609,35 @@ function copyPrevious() {
                   {{ w.editing?.creatorName }}记录 ·
                   {{ (w.editing?.createdAt || "").slice(0, 10).replaceAll("-", ".") }}
                 </p>
+                <div v-if="w.canWrite" class="note-share">
+                  <button
+                    type="button"
+                    class="btn secondary small-btn"
+                    :disabled="shareBusy"
+                    @click="createShare"
+                  >
+                    {{ shareUrl ? "重新生成链接" : "生成只读分享链接" }}
+                  </button>
+                  <button
+                    v-if="shareUrl"
+                    type="button"
+                    class="text-btn danger"
+                    :disabled="shareBusy"
+                    @click="stopShare"
+                  >
+                    停止分享
+                  </button>
+                  <div v-if="shareUrl" class="share-link">
+                    <input :value="shareUrl" readonly @focus="focusShare" />
+                    <button type="button" class="text-btn" @click="copyShare">
+                      复制
+                    </button>
+                  </div>
+                  <p class="field-help">
+                    链接 7
+                    天内有效，任何人可只读查看，无需登录；重新生成或停止分享会让旧链接失效。
+                  </p>
+                </div>
               </div>
             </template>
             <div v-if="localMessage" class="info-box">{{ localMessage }}</div>
