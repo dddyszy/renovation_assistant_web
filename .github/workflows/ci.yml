@@ -1,4 +1,4 @@
-name: Verify 0.9.12
+name: Verify 0.9.13
 on:
   push:
     branches: [main]
@@ -84,7 +84,7 @@ jobs:
           test "$((version / 10000))" -eq "${{ matrix.postgres }}"
       - name: Verify image version and runtime user
         run: |
-          test "$(docker image inspect zhu-jia-web:0.9.12 --format '{{ index .Config.Labels "org.opencontainers.image.version" }}')" = 0.9.12
+          test "$(docker image inspect zhu-jia-web:0.9.13 --format '{{ index .Config.Labels "org.opencontainers.image.version" }}')" = 0.9.13
           files=(-f compose.yaml)
           if [ '${{ matrix.storage }}' = external ]; then files+=(-f compose.external.yaml); fi
           test "$(docker compose "${files[@]}" exec -T app id -u)" = 1000
@@ -97,12 +97,12 @@ jobs:
             -v zhu-jia-defaults-data:/app/data \
             -e APP_ORIGIN=http://127.0.0.1:18080 \
             -p 127.0.0.1:18080:3001 \
-            zhu-jia-web:0.9.12
+            zhu-jia-web:0.9.13
           for attempt in {1..40}; do
             if curl --fail --silent http://127.0.0.1:18080/api/v1/health -o /tmp/health.json; then break; fi
             sleep 2
           done
-          node -e "const h = require('/tmp/health.json'); if (h.data.status !== 'ok' || h.data.version !== '0.9.12') process.exit(1)"
+          node -e "const h = require('/tmp/health.json'); if (h.data.status !== 'ok' || h.data.version !== '0.9.13') process.exit(1)"
       - run: node scripts/docker-smoke.mjs
         env:
           SMOKE_ALLOW_WRITE: "yes"
