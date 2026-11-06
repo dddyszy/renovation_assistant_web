@@ -14,6 +14,10 @@ export const router = createRouter({
       path: "/invite/:token",
       component: () => import("../views/InviteView.vue"),
     },
+    {
+      path: "/share/note/:token",
+      component: () => import("../views/SharedNoteView.vue"),
+    },
     { path: "/", component: () => import("../views/OverviewView.vue") },
     { path: "/ledger", component: () => import("../views/LedgerView.vue") },
     {

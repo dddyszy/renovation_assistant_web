@@ -109,6 +109,17 @@ export interface Note extends VersionedRecord {
   status: "pending" | "confirmed";
 }
 
+export interface SharedNote {
+  title: string;
+  details: string[];
+  starred: boolean;
+  status: "pending" | "confirmed";
+  columnName: string;
+  creatorName: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface Member {
   id: string;
   nickname: string;

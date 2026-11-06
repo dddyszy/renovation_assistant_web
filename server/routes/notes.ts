@@ -1,4 +1,5 @@
 import type { FastifyInstance } from "fastify";
+import { randomBytes } from "node:crypto";
 import { z } from "zod";
 import {
   createNotesArchive,
@@ -9,7 +10,7 @@ import {
 import { APP_VERSION } from "../../shared/version.ts";
 import type { RequestContext } from "../context.ts";
 import { fail } from "../lib/errors.ts";
-import { data, param, scope } from "../lib/http.ts";
+import { data, digest, param, scope } from "../lib/http.ts";
 import { actorFields, audit, id, insert, sqlData, update } from "../lib/persistence.ts";
 import { checkLinks, resource } from "../lib/resources.ts";
 import { noteSchema, required, version } from "../schemas.ts";
@@ -168,6 +169,69 @@ export function registerNotesRoutes(app: FastifyInstance, context: RequestContex
         });
     });
     return data({ sorted: true });
+  });
+  app.post(`${scope}/notes/:rid/share`, { preHandler: project }, async (r) => {
+    allow(r);
+    return data(
+      await writeTransaction(r, async (tx) => {
+        const note = await resource(tx, r, "notes", param(r, "rid"));
+        await tx.query(
+          "UPDATE note_shares SET revoked_at=now() WHERE note_id=$1 AND revoked_at IS NULL",
+          [note.id],
+        );
+        const token = randomBytes(32).toString("hex");
+        const expiresAt = new Date(Date.now() + 7 * 24 * 3600e3);
+        await insert(tx, "note_shares", {
+          id: id(),
+          note_id: note.id,
+          family_id: r.familyId,
+          project_id: r.project.id,
+          token_hash: digest(token),
+          created_by: r.user.id,
+          expires_at: expiresAt,
+        });
+        await audit(tx, r, "分享备忘", "notes", note.id, note.title);
+        return { token, path: `/share/note/${token}`, expiresAt };
+      }),
+    );
+  });
+  app.delete(`${scope}/notes/:rid/share`, { preHandler: project }, async (r) => {
+    allow(r);
+    return data(
+      await writeTransaction(r, async (tx) => {
+        const note = await resource(tx, r, "notes", param(r, "rid"));
+        await tx.query(
+          "UPDATE note_shares SET revoked_at=now() WHERE note_id=$1 AND revoked_at IS NULL",
+          [note.id],
+        );
+        await audit(tx, r, "停止分享备忘", "notes", note.id, note.title);
+        return { revoked: true };
+      }),
+    );
+  });
+  app.get("/api/v1/share/notes/:token", async (r) => {
+    const token = z.object({ token: z.string().min(32).max(128) }).parse(r.params).token;
+    const [row] = await db.query(
+      `SELECT n.title,n.details,n.starred,n.status,n.created_at,n.updated_at,
+              u.nickname AS creator_name,c.name AS column_name
+         FROM note_shares s
+         JOIN notes n ON n.id=s.note_id AND n.deleted_at IS NULL
+         JOIN note_columns c ON c.id=n.column_id
+         JOIN users u ON u.id=n.created_by
+        WHERE s.token_hash=$1 AND s.revoked_at IS NULL AND s.expires_at>now()`,
+      [digest(token)],
+    );
+    if (!row) fail(404, "NOT_FOUND", "分享链接不存在或已过期");
+    return data({
+      title: row.title,
+      details: row.details,
+      starred: row.starred,
+      status: row.status,
+      columnName: row.columnName,
+      creatorName: row.creatorName,
+      createdAt: row.createdAt,
+      updatedAt: row.updatedAt,
+    });
   });
   app.post(`${scope}/notes/import`, { preHandler: project }, async (r) => {
     allow(r);
