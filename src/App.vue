@@ -20,15 +20,13 @@ import {
 import { useWorkspace } from "./stores/workspace";
 import ModalHost from "./components/ModalHost.vue";
 import EmptyState from "./components/EmptyState.vue";
+import { isAuthPath, isPublicPath } from "./router/public-paths";
 const w = useWorkspace(),
   route = useRoute(),
   router = useRouter(),
   client = useQueryClient();
-const publicPage = computed(
-  () =>
-    ["/login", "/register", "/reset-password"].includes(route.path) ||
-    route.path.startsWith("/share/note/"),
-);
+const authPage = computed(() => isAuthPath(route.path));
+const publicPage = computed(() => isPublicPath(route.path));
 const nav = [
   { path: "/", label: "装修总览", icon: LayoutDashboard },
   { path: "/stages", label: "阶段计划", icon: Layers },
@@ -103,7 +101,7 @@ onMounted(async () => {
       path: "/login",
       query: route.path === "/" ? {} : { redirect: route.fullPath },
     });
-  else if (w.user && publicPage.value && route.path !== "/reset-password")
+  else if (w.user && authPage.value && route.path !== "/reset-password")
     await router.replace("/");
   if (!mounted) return;
   window.addEventListener("session-expired", sessionExpired);
