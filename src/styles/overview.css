@@ -56,13 +56,34 @@
   font-size: 10px;
   color: #9d856a;
 }
-.budget-number {
-  font-size: 39px;
-  letter-spacing: 1px;
+.budget-figures {
+  display: flex;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  gap: 34px;
+  margin: 14px 0 20px;
+}
+.budget-figure > span {
+  display: block;
+  font-size: 11px;
+  color: #8f7b62;
+  margin-bottom: 6px;
+}
+.budget-figure > strong {
+  display: block;
+  font-size: 30px;
+  line-height: 1.1;
+  letter-spacing: 0.5px;
   font-weight: 550;
-  margin: 14px 0 23px;
   color: #67482f;
   font-variant-numeric: tabular-nums;
+}
+.budget-figure.remaining > strong {
+  font-size: 24px;
+  color: #7f6246;
+}
+.budget-figure.danger > strong {
+  color: #b45f4a;
 }
 .budget-track {
   height: 5px;

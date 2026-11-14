@@ -79,12 +79,28 @@ const shortcuts = [
     ><section class="budget-hero">
       <div class="budget-main">
         <div class="card-eyebrow">
-          我们的装修预算
+          装修预算使用
           <RouterLink to="/statistics"
             >查看预算明细 <ArrowUpRight :size="15"
           /></RouterLink>
         </div>
-        <div class="budget-number">{{ money(w.project?.budgetCents) }}</div>
+        <div class="budget-figures">
+          <div class="budget-figure">
+            <span>已使用</span>
+            <strong>{{ money(stats.totalCents) }}</strong>
+          </div>
+          <div
+            class="budget-figure remaining"
+            :class="{ danger: w.project?.budgetCents && stats.balanceCents < 0 }"
+          >
+            <span>{{
+              w.project?.budgetCents && stats.balanceCents < 0 ? "已超预算" : "剩余预算"
+            }}</span>
+            <strong>{{
+              w.project?.budgetCents ? money(Math.abs(stats.balanceCents)) : "—"
+            }}</strong>
+          </div>
+        </div>
         <div class="budget-track">
           <span
             :class="{ over: ratio > 100 }"
@@ -92,13 +108,11 @@ const shortcuts = [
           />
         </div>
         <div class="budget-track-meta">
-          <span>{{
-            w.project?.budgetCents ? `预算已使用 ${ratio}%` : "尚未设置总预算"
-          }}</span
-          ><span :class="{ danger: stats.balanceCents < 0 }"
-            >{{ stats.balanceCents < 0 ? "已超预算" : "预算余额" }}
-            <strong>{{ money(Math.abs(stats.balanceCents)) }}</strong></span
-          >
+          <span
+            >总预算 <strong>{{ money(w.project?.budgetCents) }}</strong></span
+          ><span>{{
+            w.project?.budgetCents ? `已使用 ${ratio}%` : "尚未设置总预算"
+          }}</span>
         </div>
       </div>
       <div class="budget-side">
