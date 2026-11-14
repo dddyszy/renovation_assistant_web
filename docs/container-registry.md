@@ -1,6 +1,6 @@
 # 发布和使用 GitHub 容器镜像
 
-当前镜像地址：`ghcr.io/dddyszy/renovation_assistant_web:0.9.14`。版本标签只有在发布工作流成功后才可使用，以 GitHub Actions 的 Publish container image 结果为准。
+当前镜像地址：`ghcr.io/dddyszy/renovation_assistant_web:0.9.15`。版本标签只有在发布工作流成功后才可使用，以 GitHub Actions 的 Publish container image 结果为准。
 
 GHCR 是 GitHub 的容器镜像仓库。源代码保存在 Git 仓库，服务器从 GHCR 拉取构建好的镜像，无需安装 Node.js、运行 npm 或编译源码。
 
@@ -25,7 +25,7 @@ AMD64 与 ARM64 使用同一个地址，Docker 根据服务器架构选择，不
 gh workflow run publish-image.yml \
   --repo dddyszy/renovation_assistant_web \
   --ref main \
-  -f source_ref=v0.9.14
+  -f source_ref=v0.9.15
 ```
 
 后续版本将 package.json、部署默认版本和 CHANGELOG 同步后，提交代码并推送相应标签，自动触发发布；标签名必须和源码版本相同。若要重新发布旧版本，也使用该版本标签，避免把别的 commit 当成同一个版本。
@@ -40,7 +40,7 @@ gh workflow run publish-image.yml \
 read -rsp 'GHCR token: ' GHCR_TOKEN; printf '\n'
 printf '%s' "$GHCR_TOKEN" | docker login ghcr.io -u dddyszy --password-stdin
 unset GHCR_TOKEN
-docker pull ghcr.io/dddyszy/renovation_assistant_web:0.9.14
+docker pull ghcr.io/dddyszy/renovation_assistant_web:0.9.15
 ```
 
 以上为 Bash。使用其他 GitHub 账号部署时，将 `-u` 改成该账号，且确保已被授予 package 读取权限。`docker login` 会在该服务器保存登录配置，应使用专用部署账号或凭据存储。
@@ -49,7 +49,7 @@ docker pull ghcr.io/dddyszy/renovation_assistant_web:0.9.14
 
 ## 用 Compose 直接拉取运行
 
-0.9.14 镜像尚未发布时请按 [Docker 部署](docker.md) 从源码构建；以下拉取命令以对应镜像发布成功为前提。
+0.9.15 镜像尚未发布时请按 [Docker 部署](docker.md) 从源码构建；以下拉取命令以对应镜像发布成功为前提。
 
 部署前需要设置哪些变量，见 [Docker 部署](docker.md)。
 
@@ -84,7 +84,7 @@ docker run -d --name zhu-jia --init --restart unless-stopped \
   -v zhu_jia_data:/app/data \
   -e DATABASE_URL=/app/data/postgres \
   -e APP_ORIGIN=http://home.example.com \
-  ghcr.io/dddyszy/renovation_assistant_web:0.9.14
+  ghcr.io/dddyszy/renovation_assistant_web:0.9.15
 ```
 
 将服务器现有站点代理到该端口，APP_ORIGIN 填浏览器实际访问的入口。数据保存在命名卷，替换容器不删除数据库。镜像已内置 `DATABASE_URL=/app/data/postgres`，上面这条内置模式命令可以省略该变量；连接外部 PostgreSQL 时直接传 `postgresql://` 连接串即可。
