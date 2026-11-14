@@ -299,6 +299,13 @@
   .card-eyebrow > a {
     font-size: 9px;
   }
+  .budget-head {
+    align-items: center;
+  }
+  .budget-switch button {
+    padding: 5px 10px;
+    font-size: 10px;
+  }
   .budget-figures {
     display: grid;
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);

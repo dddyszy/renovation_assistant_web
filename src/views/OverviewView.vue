@@ -22,7 +22,8 @@ import CostRows from "../components/CostRows.vue";
 import EmptyState from "../components/EmptyState.vue";
 const w = useWorkspace(),
   query = useProjectQuery("statistics"),
-  index = ref(0);
+  index = ref(0),
+  budgetMode = ref<"used" | "budget">("used");
 const stats = computed(() => query.data.value?.data);
 const activeStages = computed(() =>
   stats.value?.stages.filter((s) => s.status === "in_progress").length
@@ -78,16 +79,40 @@ const shortcuts = [
   <template v-if="stats"
     ><section class="budget-hero">
       <div class="budget-main">
-        <div class="card-eyebrow">
-          装修预算使用
-          <RouterLink to="/statistics"
-            >查看预算明细 <ArrowUpRight :size="15"
-          /></RouterLink>
+        <div class="budget-head">
+          <div class="card-eyebrow">
+            装修预算
+            <RouterLink to="/statistics"
+              >查看预算明细 <ArrowUpRight :size="15"
+            /></RouterLink>
+          </div>
+          <div class="budget-switch" role="tablist" aria-label="预算显示方式">
+            <button
+              type="button"
+              role="tab"
+              :aria-selected="budgetMode === 'used'"
+              :class="{ active: budgetMode === 'used' }"
+              @click="budgetMode = 'used'"
+            >
+              已使用
+            </button>
+            <button
+              type="button"
+              role="tab"
+              :aria-selected="budgetMode === 'budget'"
+              :class="{ active: budgetMode === 'budget' }"
+              @click="budgetMode = 'budget'"
+            >
+              预算
+            </button>
+          </div>
         </div>
         <div class="budget-figures">
           <div class="budget-figure">
-            <span>已使用</span>
-            <strong>{{ money(stats.totalCents) }}</strong>
+            <span>{{ budgetMode === "budget" ? "总预算" : "已使用" }}</span>
+            <strong>{{
+              money(budgetMode === "budget" ? w.project?.budgetCents : stats.totalCents)
+            }}</strong>
           </div>
           <div
             class="budget-figure remaining"
