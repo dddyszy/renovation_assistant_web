@@ -1,7 +1,7 @@
 name: zhu-jia-web
 services:
   app:
-    image: zhu-jia-web:0.9.15
+    image: zhu-jia-web:0.9.16
     build: .
     init: true
     restart: unless-stopped
