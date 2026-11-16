@@ -23,7 +23,7 @@ npm run dev
 | `npm run build`        | 类型检查、Vite 生产构建和静态资源压缩            |
 | `npm run check`        | 提交前的统一检查：lint、格式、构建和测试         |
 
-CI 与 Docker 构建执行 `npm run check`。CI 另外在 PostgreSQL 18、17 上运行集成测试，并验收三种容器存储模式。格式和 lint 不在普通开发启动时自动改文件。
+CI 与 Docker 构建执行 `npm run check`。CI 另外在 PostgreSQL 18、17 上运行集成测试，并验收内置与外置数据库的三种容器组合。格式和 lint 不在普通开发启动时自动改文件。
 
 ## 代码放在哪里
 
@@ -40,7 +40,7 @@ server/
   app.ts              装配 Fastify 插件、上下文和路由，不承载业务处理
   context.ts          会话、家庭/项目权限和写事务守卫
   routes/             按业务分组的接口与请求校验
-  services/           邮件、项目数据清理等服务端操作
+  services/           项目数据清理、备忘交换等服务端操作
   lib/                错误、响应、资源关联和 SQL 写入辅助函数
   plugins/            通用请求安全检查、响应头和错误映射
   schemas.ts          Zod 字段约束与业务输入结构

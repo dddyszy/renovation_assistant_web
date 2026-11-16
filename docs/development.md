@@ -4,7 +4,7 @@
 
 ## 开发环境
 
-推荐 Node.js 24 LTS，最低 22.13。目录、命名与贡献约定见 [开发与协作规范](../CONTRIBUTING.md)。提交前运行 `npm run check`，自动修复与格式化分别使用 `npm run lint:fix`、`npm run format`。
+推荐 Node.js 24 LTS，最低 22.13。目录、命名与贡献约定见 [开发与协作规范](../CONTRIBUTING.md)。提交前运行 `npm run check`，自动修复与格式化分别使用 `npm run lint:fix`、`npm run format`。测试分层、覆盖率命令和未覆盖范围见 [测试与质量保障](testing.md)。
 
 `npm run dev` 同时启动 Vite 与 Fastify。浏览器的 `/api/v1` 请求由 Vite 转发到本机 3001 端口。写请求必须携带同源 Origin 和应用请求头；开发环境允许本机及局域网的 5173 端口，未开放跨域 CORS。
 
@@ -71,10 +71,10 @@ API 服务会托管 `dist/`，并为前端深链接返回 index.html，未知 AP
 - API 测试：内存 PGlite 上验证直接注册、家庭隔离、权限、邀请、移除成员、所有权转让、归档/清理、密码重置、重复提交、并发请求、编辑冲突、35 条跨页账本与全集金额。
 - 内置存储：关闭再打开持久化目录，验证数据仍存在；迁移预检、金额、软删除、JSON 描述、会话不复制与非空目标拒绝均有自动测试。
 - 外置存储：本机临时独立 PostgreSQL 17 集群验证同一套 API；通过 PG 环境变量传递含特殊字符的密码，无需拼 URL。
-- PostgreSQL 18 / 17：CI 分别验证真实服务版本、API 与迁移；已发布的 0.9.5 镜像分别通过两种版本的容器重建持久化、记账接口和备份恢复验证，运行记录见 [PostgreSQL 部署说明](postgresql.md#备份与验证)。
+- PostgreSQL 18 / 17：CI 分别验证真实服务版本、API 与迁移；历史 0.9.5 发布已验证两种 PostgreSQL 主版本的持久化、接口与备份恢复；当前外置库备份与恢复方式见 [外置 PostgreSQL](postgresql.md#备份与恢复)。
 - 存储切换：已验证 PGlite 到临时独立 PostgreSQL 17 的迁移；目标金额、JSON 描述、偏好及软删除一致，且不会复制登录会话或覆盖已使用的目标库。
 - Compose：使用官方 Compose CLI 检查内置、外置 PostgreSQL、目录挂载和预构建镜像组合。
 - 浏览器：在本地内置浏览器使用虚构演示账号验证登录、首页、材料关联付款、软删除/恢复/即时撤销、备忘编辑、家庭与项目切换；检查 360px/390px/1440px 宽度。截图存放于本机 artifacts，未纳入源码。
 - 小程序参考：使用现有微信开发者工具读取并截图首页，参考其配色、预算卡片、阶段与底部导航，没有调用原项目写入测试。
 
-本次 0.9.16 不在本机安装 Docker，由当前提交对应的 GitHub Actions 完成 Linux AMD64 容器构建、内置数据库与 PostgreSQL 18 / 17 HTTP 验收；结果以最新 CI 运行记录为准。历史 0.9.5 验证记录见 [PostgreSQL 部署说明](postgresql.md#备份与验证)。GHCR 的双架构构建与拉取验证由独立发布流程处理，见容器镜像仓库文档。真实邮件、目标服务器和 iOS/Android 真机仍未验证。
+本次 0.9.16 不在本机安装 Docker，由当前提交对应的 GitHub Actions 完成 Linux AMD64 容器构建、内置数据库与 PostgreSQL 18 / 17 HTTP 验收；结果以最新 CI 运行记录为准。GHCR 的双架构构建与拉取验证由独立发布流程处理，见容器镜像仓库文档。目标服务器和 iOS/Android 真机仍需单独验收。
