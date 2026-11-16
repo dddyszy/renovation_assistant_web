@@ -1,6 +1,6 @@
 # 发布流程
 
-当前版本：0.9.16。所有代码、配置和文档变更统一使用：**从 main 建 release → 从 release 建功能分支 → 合入 release → 打 tag 发布 → 合入 main**。
+当前版本：0.9.17。所有代码、配置和文档变更统一使用：**从 main 建 release → 从 release 建功能分支 → 合入 release → 打 tag 发布 → 合入 main**。
 
 ## 分支规则
 
