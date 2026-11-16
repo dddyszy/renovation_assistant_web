@@ -1,6 +1,6 @@
 # 配置参考
 
-版本：**0.9.16**。Docker 和本地开发均可从 `.env.example` 复制 `.env`；真实凭据不提交。
+版本：**0.9.17**。Docker 和本地开发均可从 `.env.example` 复制 `.env`；真实凭据不提交。
 
 ## 应用运行变量
 
@@ -26,12 +26,12 @@ Docker 镜像默认固定 `/app/data/postgres`；外置数据库用 `DATABASE_UR
 
 ## Docker 编排变量
 
-默认只需要 APP_ORIGIN。源码构建镜像固定为 `zhu-jia-web:0.9.16`，端口固定映射 `127.0.0.1:8080:3001`，修改时直接编辑 Compose。
+默认只需要 APP_ORIGIN。源码构建镜像固定为 `zhu-jia-web:0.9.17`，端口固定映射 `127.0.0.1:8080:3001`，修改时直接编辑 Compose。
 
 | 变量                      | 默认值或条件              | 用途                       |
 | ------------------------- | ------------------------- | -------------------------- |
 | APP_ORIGIN                | 必填                      | 用户浏览器真实入口         |
-| APP_IMAGE / APP_IMAGE_TAG | GHCR 仓库 / 0.9.16        | 仅 compose.image.yaml 使用 |
+| APP_IMAGE / APP_IMAGE_TAG | GHCR 仓库 / 0.9.17        | 仅 compose.image.yaml 使用 |
 | DATA_DIR                  | 仅 compose.bind.yaml 必填 | 宿主机数据目录绝对路径     |
 | DATABASE_URL              | 仅外部 PostgreSQL 必填    | 已有数据库的连接串         |
 

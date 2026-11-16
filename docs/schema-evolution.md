@@ -1,6 +1,6 @@
 # 数据库结构演进
 
-适用版本：0.9.16。当前 schema 来源为 `server/schema.sql`，PGlite 与外置 PostgreSQL 共用相同业务表。
+适用版本：0.9.17。当前 schema 来源为 `server/schema.sql`，PGlite 与外置 PostgreSQL 共用相同业务表。
 
 ## 当前启动行为
 

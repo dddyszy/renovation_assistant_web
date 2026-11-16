@@ -4,6 +4,8 @@
 
 ## 日常开发
 
+先按 [发布流程](docs/releasing.md) 从 `main` 创建 `release/X.Y.Z`，再从该 release 创建功能分支。功能分支只合入对应 release，不直接合入 `main`；标签从 release 创建，发布成功后才把 release 合入 `main`。
+
 ```bash
 nvm use                 # 安装 nvm 的开发者可选
 npm ci
