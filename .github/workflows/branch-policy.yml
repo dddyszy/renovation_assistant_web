@@ -1,0 +1,30 @@
+name: Branch flow policy
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review, edited]
+permissions:
+  contents: read
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    env:
+      BASE_REF: ${{ github.base_ref }}
+      HEAD_REF: ${{ github.head_ref }}
+    steps:
+      - name: Validate source and target branches
+        run: |
+          if [ "$BASE_REF" = main ]; then
+            if [[ ! "$HEAD_REF" =~ ^release/[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+              echo 'Only release/X.Y.Z branches may merge into main.' >&2
+              exit 1
+            fi
+          elif [[ "$BASE_REF" =~ ^release/[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            if [[ ! "$HEAD_REF" =~ ^(feat|fix|docs|test|chore|refactor)/ ]]; then
+              echo 'Release branches only accept feature/fix/docs/test/chore/refactor branches.' >&2
+              exit 1
+            fi
+          else
+            echo "Pull requests must target main or a release/X.Y.Z branch, not $BASE_REF." >&2
+            exit 1
+          fi
+          echo "Branch flow accepted: $HEAD_REF -> $BASE_REF"
