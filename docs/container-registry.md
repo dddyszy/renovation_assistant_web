@@ -19,16 +19,17 @@ GHCR 是 GitHub 的容器镜像仓库。源代码保存在 Git 仓库，服务�
 
 AMD64 与 ARM64 使用同一个地址，Docker 根据服务器架构选择，不需要用户分别找镜像。暂不发布 `latest`，部署固定具体版本，避免升级时误拉未计划的版本。
 
-首次手动发布：
+发布标签必须从 `release/X.Y.Z` 的最新提交创建，完整流程见 [发布流程](releasing.md)。
+
+手动重新发布同一版本时，选择匹配的 release 分支，而不是 `main` 或标签名：
 
 ```bash
 gh workflow run publish-image.yml \
   --repo dddyszy/renovation_assistant_web \
-  --ref main \
-  -f source_ref=v0.9.16
+  -f source_ref=release/0.9.17
 ```
 
-后续版本将 package.json、部署默认版本和 CHANGELOG 同步后，提交代码并推送相应标签，自动触发发布；标签名必须和源码版本相同。若要重新发布旧版本，也使用该版本标签，避免把别的 commit 当成同一个版本。
+工作流会校验：release 分支名与 package.json 版本一致，且被构建的提交就是该分支当前最新提交。不满足时直接失败，不做发布。
 
 ## 私有镜像登录
 
