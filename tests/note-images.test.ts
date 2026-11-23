@@ -155,6 +155,18 @@ test("图片类型与大小受限，删除后不再返回", async () => {
   );
 });
 
+test("并发上传也不会超过六张", async () => {
+  const { cookie, base, noteId } = await workspace();
+  const results = await Promise.all(
+    Array.from({ length: 7 }, () => upload(cookie, base, noteId)),
+  );
+  assert.equal(results.filter((r) => r.status === 200).length, 6);
+  assert.equal(results.filter((r) => r.status === 422).length, 1);
+  const list = await api(`${base}/notes?columnId=&page=1`, "GET", undefined, cookie);
+  const note = list.json.data.find((n: { id: string }) => n.id === noteId);
+  assert.equal(note.images.length, 6);
+});
+
 test("只读成员不能上传，单条备忘最多六张", async () => {
   const { cookie, fid, base, noteId } = await workspace();
   for (let i = 0; i < 6; i++)

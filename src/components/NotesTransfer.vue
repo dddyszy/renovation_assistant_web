@@ -155,7 +155,7 @@ async function importFile() {
           </select></label
         >
         <p class="muted small-text">
-          包含范围内全部有效备忘，不受筛选、分页影响；不导出最近删除内容。
+          包含范围内全部有效备忘，不受筛选、分页影响；不导出最近删除内容和图片。
         </p>
         <button class="btn secondary" :disabled="busy" @click="exportFile">
           导出 JSON 文件

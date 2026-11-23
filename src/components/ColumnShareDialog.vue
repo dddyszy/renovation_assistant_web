@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from "vue";
+import { computed, onMounted, onUnmounted, ref } from "vue";
 import { X } from "@lucide/vue";
 import type { NoteColumn } from "../../shared/api";
 import { useWorkspace } from "../stores/workspace";
@@ -14,6 +14,12 @@ const days = ref<0 | 7 | 30>(7);
 const busy = ref(false);
 const copied = ref(false);
 const error = ref("");
+const expiryText = computed(() => {
+  if (!expiresAt.value) return "";
+  const date = new Date(expiresAt.value);
+  if (Number.isNaN(date.getTime())) return "";
+  return `链接有效期至 ${date.getFullYear()}.${String(date.getMonth() + 1).padStart(2, "0")}.${String(date.getDate()).padStart(2, "0")}`;
+});
 
 async function create() {
   busy.value = true;
@@ -58,6 +64,11 @@ async function copy() {
 function focusInput(event: Event) {
   (event.target as HTMLInputElement).select();
 }
+function onKeydown(event: KeyboardEvent) {
+  if (event.key === "Escape") emit("close");
+}
+onMounted(() => document.addEventListener("keydown", onKeydown));
+onUnmounted(() => document.removeEventListener("keydown", onKeydown));
 </script>
 
 <template>
@@ -79,9 +90,18 @@ function focusInput(event: Event) {
       </header>
       <div v-if="error" class="error-box" role="alert">{{ error }}</div>
       <p class="field-help">
-        链接 7
-        天内有效，任何人可只读查看该专栏的全部备忘和图片，无需登录；重新生成或停止分享会让旧链接立即失效。
+        {{
+          expiryText || (url ? "链接永久有效" : "按所选有效期生效")
+        }}，任何人可只读查看该专栏的全部备忘和图片，无需登录；重新生成或停止分享会让旧链接立即失效。
       </p>
+      <label class="share-expiry"
+        >有效期
+        <select v-model.number="days" :disabled="busy">
+          <option :value="7">7 天</option>
+          <option :value="30">30 天</option>
+          <option :value="0">永久</option>
+        </select>
+      </label>
       <div v-if="url" class="column-share-link share-link">
         <input :value="url" readonly @focus="focusInput" />
         <button type="button" class="text-btn" @click="copy">
