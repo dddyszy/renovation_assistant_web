@@ -4,6 +4,7 @@ import type { RequestContext } from "../context.ts";
 import { fail } from "../lib/errors.ts";
 import { data, digest, param, scope } from "../lib/http.ts";
 import { actorFields, audit, id, insert, sqlData, update } from "../lib/persistence.ts";
+import { attachNoteImages } from "../lib/note-images.ts";
 import { checkLinks, resource } from "../lib/resources.ts";
 import {
   businessDate,
@@ -71,7 +72,7 @@ export function registerRecordsRoutes(app: FastifyInstance, context: RequestCont
         `SELECT t.*,u.nickname AS creator_name FROM ${table} t JOIN users u ON t.created_by=u.id WHERE ${where} ORDER BY ${table === "costs" ? "t.incurred_at DESC," : table === "notes" ? "t.starred DESC," : ""}t.created_at DESC,t.id DESC LIMIT $${args.length + 1} OFFSET $${args.length + 2}`,
         [...args, q.pageSize, (q.page - 1) * q.pageSize],
       );
-      return data(rows, {
+      return data(table === "notes" ? await attachNoteImages(db, rows) : rows, {
         total: total!.count,
         totalCents: total!.totalCents,
         page: q.page,
@@ -121,7 +122,7 @@ export function registerRecordsRoutes(app: FastifyInstance, context: RequestCont
               : {}),
           });
           await audit(tx, r, "新增记录", table, row.id, row.name || row.title);
-          return row;
+          return table === "notes" ? (await attachNoteImages(tx, [row]))[0] : row;
         }),
       );
     });
@@ -143,7 +144,7 @@ export function registerRecordsRoutes(app: FastifyInstance, context: RequestCont
               [b.stageId, r.user.id, r.familyId, r.project.id, row.id],
             );
           await audit(tx, r, "修改记录", table, row.id, next.name || next.title);
-          return next;
+          return table === "notes" ? (await attachNoteImages(tx, [next]))[0] : next;
         }),
       );
     });

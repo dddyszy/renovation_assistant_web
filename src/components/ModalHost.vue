@@ -6,12 +6,14 @@ import type {
   Family,
   Project,
   VersionedRecord,
+  NoteImage,
 } from "../../shared/api";
 import { computed, ref, watch, nextTick, onMounted, onUnmounted } from "vue";
 import { useQueryClient } from "@tanstack/vue-query";
 import { X, Plus, Trash2, Archive, RotateCcw, Copy, Wallet, Package } from "@lucide/vue";
 import { useWorkspace, type Item } from "../stores/workspace";
 import { request, errorMessage } from "../services/api";
+import { prepareImage, noteImagePath, type PreparedImage } from "../services/images";
 import LinkText from "./LinkText.vue";
 import { templates, categories, toCents, parseNotes, money } from "../../shared/domain";
 import { useProjectQuery } from "../composables/useProjectQuery";
@@ -25,7 +27,11 @@ const w = useWorkspace(),
   panel = ref<HTMLElement>(),
   deleteConfirm = ref(false),
   shareUrl = ref(""),
-  shareBusy = ref(false);
+  shareBusy = ref(false),
+  imageInput = ref<HTMLInputElement>(),
+  imageBusy = ref(false),
+  noteImages = ref<NoteImage[]>([]),
+  pendingImages = ref<PreparedImage[]>([]);
 const stages = useProjectQuery("stages"),
   columns = useProjectQuery("note-columns");
 const viewColumn = computed(
@@ -110,6 +116,8 @@ watch(
     error.value = "";
     deleteConfirm.value = false;
     shareUrl.value = "";
+    noteImages.value = [];
+    pendingImages.value = [];
     localMessage.value = "";
     busy.value = false;
     if (!type) return;
@@ -183,7 +191,8 @@ watch(
             amount: "",
             purchaseStatus: "planned",
           };
-    else if (type === "note")
+    else if (type === "note") {
+      noteImages.value = e?.images ? [...e.images] : [];
       form.value = e
         ? {
             ...e,
@@ -196,7 +205,7 @@ watch(
             starred: false,
             status: "pending",
           };
-    else if (type === "stage")
+    } else if (type === "stage")
       form.value = e
         ? { ...e, budget: String(e.budgetCents / 100) }
         : { name: "", budget: "", status: "pending" };
@@ -364,11 +373,21 @@ async function save() {
         };
       }
       if (e) payload.version = e.version;
-      await request(
+      const saved = await request<{ id: string }>(
         `${w.base}/${resource}${e ? `/${e.id}` : ""}`,
         e ? "PATCH" : "POST",
         payload,
       );
+      if (type === "note" && !e && pendingImages.value.length && saved.data?.id) {
+        for (const image of pendingImages.value)
+          await request(`${w.base}/notes/${saved.data.id}/images`, "POST", {
+            data: image.data,
+            mime: image.mime,
+            width: image.width,
+            height: image.height,
+          });
+        pendingImages.value = [];
+      }
       if (type === "cost") {
         localStorage.removeItem(draftKey.value);
         if (f.stageId) localStorage.setItem(`stage:${w.user?.id}:${w.pid}`, f.stageId);
@@ -386,6 +405,56 @@ async function save() {
     error.value = errorMessage(e);
   } finally {
     busy.value = false;
+  }
+}
+function imageUrl(noteId: string, imageId: string) {
+  return noteImagePath(w.base, noteId, imageId);
+}
+async function addImages(event: Event) {
+  const input = event.target as HTMLInputElement;
+  const files = Array.from(input.files || []);
+  input.value = "";
+  if (!files.length) return;
+  const remaining = 6 - noteImages.value.length - pendingImages.value.length;
+  if (remaining <= 0) {
+    error.value = "每条备忘最多 6 张图片";
+    return;
+  }
+  imageBusy.value = true;
+  error.value = "";
+  try {
+    for (const file of files.slice(0, remaining)) {
+      const prepared = await prepareImage(file);
+      if (w.editing?.id) {
+        const { data } = await request<NoteImage>(
+          `${w.base}/notes/${w.editing.id}/images`,
+          "POST",
+          {
+            data: prepared.data,
+            mime: prepared.mime,
+            width: prepared.width,
+            height: prepared.height,
+          },
+        );
+        noteImages.value.push(data);
+      } else pendingImages.value.push(prepared);
+    }
+  } catch (e) {
+    error.value = errorMessage(e);
+  } finally {
+    imageBusy.value = false;
+  }
+}
+async function removeNoteImage(imageId: string) {
+  if (!w.editing?.id) return;
+  imageBusy.value = true;
+  try {
+    await request(`${w.base}/notes/${w.editing.id}/images/${imageId}`, "DELETE");
+    noteImages.value = noteImages.value.filter((image) => image.id !== imageId);
+  } catch (e) {
+    error.value = errorMessage(e);
+  } finally {
+    imageBusy.value = false;
   }
 }
 async function createShare() {
@@ -605,6 +674,24 @@ function copyPrevious() {
                   </li>
                 </ul>
                 <p v-else class="note-view-empty">暂无具体描述</p>
+                <div
+                  v-if="w.editing?.images?.length"
+                  class="note-image-grid note-image-view"
+                >
+                  <a
+                    v-for="image in w.editing.images"
+                    :key="image.id"
+                    :href="imageUrl(w.editing?.id || '', image.id)"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    <img
+                      :src="imageUrl(w.editing?.id || '', image.id)"
+                      :alt="w.editing?.title || '备忘图片'"
+                      loading="lazy"
+                    />
+                  </a>
+                </div>
                 <p class="note-view-footer">
                   {{ w.editing?.creatorName }}记录 ·
                   {{ (w.editing?.createdAt || "").slice(0, 10).replaceAll("-", ".") }}
@@ -992,6 +1079,61 @@ function copyPrevious() {
                 >
                   ＋ 新增要点
                 </button>
+              </div>
+              <div class="field note-images-field">
+                <span
+                  >图片
+                  <span class="optional">最多 6 张，自动压缩到长边 1600px</span></span
+                >
+                <div
+                  v-if="noteImages.length || pendingImages.length"
+                  class="note-image-grid"
+                >
+                  <figure v-for="image in noteImages" :key="image.id">
+                    <img
+                      :src="imageUrl(w.editing?.id || '', image.id)"
+                      :alt="form.title || '备忘图片'"
+                      loading="lazy"
+                    />
+                    <button
+                      type="button"
+                      class="text-btn danger"
+                      :disabled="imageBusy"
+                      @click="removeNoteImage(image.id)"
+                    >
+                      删除
+                    </button>
+                  </figure>
+                  <figure v-for="(image, i) in pendingImages" :key="`pending-${i}`">
+                    <img :src="image.preview" :alt="form.title || '待上传图片'" />
+                    <button
+                      type="button"
+                      class="text-btn danger"
+                      @click="pendingImages.splice(i, 1)"
+                    >
+                      移除
+                    </button>
+                  </figure>
+                </div>
+                <input
+                  ref="imageInput"
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  multiple
+                  hidden
+                  @change="addImages"
+                />
+                <button
+                  type="button"
+                  class="btn secondary small-btn"
+                  :disabled="imageBusy || noteImages.length + pendingImages.length >= 6"
+                  @click="imageInput?.click()"
+                >
+                  ＋ 添加图片
+                </button>
+                <p class="field-help">
+                  支持 JPG、PNG、WebP；图片保存在数据库，随备份一起迁移。
+                </p>
               </div>
               <label class="checkbox-line"
                 ><input v-model="form.starred" type="checkbox" />标记为重点</label

@@ -103,6 +103,17 @@
 
 分享接口只返回标题、描述、状态、专栏名和记录人，不含家庭、项目或账号标识。
 
+## 备忘图片
+
+| 方法与路径                                                       | 说明                                                                               |
+| ---------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
+| POST `/families/:fid/projects/:pid/notes/:rid/images`            | JSON `{data,mime,width,height}`，`data` 为 base64；解码后 ≤ 3MB，单条备忘最多 6 张 |
+| GET `/families/:fid/projects/:pid/notes/:rid/images/:imageId`    | 返回二进制图片；需要登录，`Cache-Control: private, max-age=300`                    |
+| DELETE `/families/:fid/projects/:pid/notes/:rid/images/:imageId` | 软删除图片                                                                         |
+| GET `/share/notes/:token/images/:imageId`                        | 公开只读图片；分享撤销、过期或备忘删除后返回 404                                   |
+
+上传只接受 JPEG、PNG、WebP，并按文件头校验真实类型；声明类型不一致返回 422 `INVALID_IMAGE`。单条上限 6 张返回 422 `LIMIT`，请求体上限 8MB。列表和写入响应中的 `images` 只包含 `id`、`mime`、`width`、`height`，不返回二进制内容。
+
 ## 备忘文件交换（0.9.6）
 
 `GET P/notes/export?columnId=...` 导出当前专栏，省略 columnId 导出整个项目；返回共用 JSON v1 归档。`POST P/notes/import-file` 接收该归档，返回新增、跳过与新建专栏数量，整体事务且保持原有项目写权限。文件最多 2 MiB，详见 [协议与错误约束](notes-transfer.md)。
