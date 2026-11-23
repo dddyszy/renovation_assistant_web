@@ -18,6 +18,10 @@ export const router = createRouter({
       path: "/share/note/:token",
       component: () => import("../views/SharedNoteView.vue"),
     },
+    {
+      path: "/share/column/:token",
+      component: () => import("../views/SharedColumnView.vue"),
+    },
     { path: "/", component: () => import("../views/OverviewView.vue") },
     { path: "/ledger", component: () => import("../views/LedgerView.vue") },
     {

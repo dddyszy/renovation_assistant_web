@@ -81,6 +81,13 @@ CREATE TABLE IF NOT EXISTS notes (
  FOREIGN KEY(project_id,family_id) REFERENCES projects(id,family_id) ON DELETE CASCADE,
  FOREIGN KEY(column_id,family_id,project_id) REFERENCES note_columns(id,family_id,project_id)
 );
+CREATE TABLE IF NOT EXISTS note_column_shares (
+ id text PRIMARY KEY, column_id text NOT NULL, family_id text NOT NULL, project_id text NOT NULL,
+ token_hash text NOT NULL UNIQUE, created_by text NOT NULL REFERENCES users(id),
+ expires_at timestamptz NOT NULL, revoked_at timestamptz, created_at timestamptz NOT NULL DEFAULT now(),
+ FOREIGN KEY(project_id,family_id) REFERENCES projects(id,family_id) ON DELETE CASCADE
+);
+CREATE INDEX IF NOT EXISTS note_column_shares_column ON note_column_shares(column_id) WHERE revoked_at IS NULL;
 CREATE TABLE IF NOT EXISTS note_images (
  id text PRIMARY KEY, note_id text NOT NULL, family_id text NOT NULL, project_id text NOT NULL,
  mime text NOT NULL, width integer NOT NULL DEFAULT 0, height integer NOT NULL DEFAULT 0,

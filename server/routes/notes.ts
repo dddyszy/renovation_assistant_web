@@ -12,6 +12,7 @@ import type { RequestContext } from "../context.ts";
 import { fail } from "../lib/errors.ts";
 import { data, digest, param, scope } from "../lib/http.ts";
 import { actorFields, audit, id, insert, sqlData, update } from "../lib/persistence.ts";
+import { attachNoteImages } from "../lib/note-images.ts";
 import { checkLinks, resource } from "../lib/resources.ts";
 import { noteSchema, required, version } from "../schemas.ts";
 import { importProjectNotes, readProjectNotes } from "../services/notes-transfer.ts";
@@ -298,6 +299,95 @@ export function registerNotesRoutes(app: FastifyInstance, context: RequestContex
       );
     },
   );
+  app.post(`${scope}/note-columns/:rid/share`, { preHandler: project }, async (r) => {
+    allow(r);
+    return data(
+      await writeTransaction(r, async (tx) => {
+        const column = await resource(tx, r, "note_columns", param(r, "rid"));
+        await tx.query(
+          "UPDATE note_column_shares SET revoked_at=now() WHERE column_id=$1 AND revoked_at IS NULL",
+          [column.id],
+        );
+        const token = randomBytes(32).toString("hex");
+        const expiresAt = new Date(Date.now() + 7 * 24 * 3600e3);
+        await insert(tx, "note_column_shares", {
+          id: id(),
+          column_id: column.id,
+          family_id: r.familyId,
+          project_id: r.project.id,
+          token_hash: digest(token),
+          created_by: r.user.id,
+          expires_at: expiresAt,
+        });
+        await audit(tx, r, "分享备忘专栏", "note_columns", column.id, column.name);
+        return { token, path: `/share/column/${token}`, expiresAt };
+      }),
+    );
+  });
+  app.delete(`${scope}/note-columns/:rid/share`, { preHandler: project }, async (r) => {
+    allow(r);
+    return data(
+      await writeTransaction(r, async (tx) => {
+        const column = await resource(tx, r, "note_columns", param(r, "rid"));
+        await tx.query(
+          "UPDATE note_column_shares SET revoked_at=now() WHERE column_id=$1 AND revoked_at IS NULL",
+          [column.id],
+        );
+        await audit(tx, r, "停止分享备忘专栏", "note_columns", column.id, column.name);
+        return { revoked: true };
+      }),
+    );
+  });
+  app.get("/api/v1/share/columns/:token", async (r) => {
+    const token = z.object({ token: z.string().min(32).max(128) }).parse(r.params).token;
+    const [column] = await db.query(
+      `SELECT c.id,c.name,c.family_id,c.project_id,u.nickname AS creator_name
+         FROM note_column_shares s
+         JOIN note_columns c ON c.id=s.column_id AND c.deleted_at IS NULL
+         JOIN users u ON u.id=c.created_by
+        WHERE s.token_hash=$1 AND s.revoked_at IS NULL AND s.expires_at>now()`,
+      [digest(token)],
+    );
+    if (!column) fail(404, "NOT_FOUND", "分享链接不存在或已过期");
+    const [count] = await db.query(
+      "SELECT count(*)::int AS count FROM notes WHERE column_id=$1 AND family_id=$2 AND project_id=$3 AND deleted_at IS NULL",
+      [column.id, column.familyId, column.projectId],
+    );
+    const notes = await db.query(
+      `SELECT n.id,n.title,n.details,n.starred,n.status,n.created_at,u.nickname AS creator_name
+         FROM notes n JOIN users u ON u.id=n.created_by
+        WHERE n.column_id=$1 AND n.family_id=$2 AND n.project_id=$3 AND n.deleted_at IS NULL
+        ORDER BY n.starred DESC,n.created_at DESC,n.id DESC LIMIT 200`,
+      [column.id, column.familyId, column.projectId],
+    );
+    return data({
+      name: column.name,
+      creatorName: column.creatorName,
+      total: count!.count,
+      notes: await attachNoteImages(db, notes),
+    });
+  });
+  app.get("/api/v1/share/columns/:token/images/:imageId", async (r, reply) => {
+    const p = z
+      .object({
+        token: z.string().min(32).max(128),
+        imageId: z.string().min(1).max(64),
+      })
+      .parse(r.params);
+    const [row] = await db.query(
+      `SELECT i.mime,i.bytes FROM note_column_shares s
+         JOIN note_columns c ON c.id=s.column_id AND c.deleted_at IS NULL
+         JOIN notes n ON n.column_id=c.id AND n.deleted_at IS NULL
+         JOIN note_images i ON i.note_id=n.id AND i.deleted_at IS NULL
+        WHERE s.token_hash=$1 AND s.revoked_at IS NULL AND s.expires_at>now() AND i.id=$2`,
+      [digest(p.token), p.imageId],
+    );
+    if (!row) fail(404, "NOT_FOUND", "图片不存在");
+    return reply
+      .type(row.mime)
+      .header("Cache-Control", "no-store")
+      .send(Buffer.from(row.bytes));
+  });
   app.get("/api/v1/share/notes/:token/images/:imageId", async (r, reply) => {
     const p = z
       .object({
