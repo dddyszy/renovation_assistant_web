@@ -244,6 +244,8 @@ export function registerNotesRoutes(app: FastifyInstance, context: RequestContex
       return data(
         await writeTransaction(r, async (tx) => {
           const note = await resource(tx, r, "notes", param(r, "rid"));
+          // Serialize uploads per note so concurrent requests cannot exceed the image limit.
+          await tx.query("SELECT id FROM notes WHERE id=$1 FOR UPDATE", [note.id]);
           const [count] = await tx.query(
             "SELECT count(*)::int AS count FROM note_images WHERE note_id=$1 AND deleted_at IS NULL",
             [note.id],
@@ -274,7 +276,10 @@ export function registerNotesRoutes(app: FastifyInstance, context: RequestContex
   );
   app.get(
     `${scope}/notes/:rid/images/:imageId`,
-    { preHandler: project },
+    {
+      preHandler: project,
+      config: { rateLimit: { max: 600, timeWindow: "1 minute" } },
+    },
     async (r, reply) => {
       const [row] = await db.query(
         `SELECT i.mime,i.bytes FROM note_images i
@@ -292,7 +297,10 @@ export function registerNotesRoutes(app: FastifyInstance, context: RequestContex
   );
   app.delete(
     `${scope}/notes/:rid/images/:imageId`,
-    { preHandler: project },
+    {
+      preHandler: project,
+      config: { rateLimit: { max: 600, timeWindow: "1 minute" } },
+    },
     async (r) => {
       allow(r);
       return data(
@@ -385,48 +393,56 @@ export function registerNotesRoutes(app: FastifyInstance, context: RequestContex
       notes: await attachNoteImages(db, notes),
     });
   });
-  app.get("/api/v1/share/columns/:token/images/:imageId", async (r, reply) => {
-    const p = z
-      .object({
-        token: z.string().min(32).max(128),
-        imageId: z.string().min(1).max(64),
-      })
-      .parse(r.params);
-    const [row] = await db.query(
-      `SELECT i.mime,i.bytes FROM note_column_shares s
+  app.get(
+    "/api/v1/share/columns/:token/images/:imageId",
+    { config: { rateLimit: { max: 600, timeWindow: "1 minute" } } },
+    async (r, reply) => {
+      const p = z
+        .object({
+          token: z.string().min(32).max(128),
+          imageId: z.string().min(1).max(64),
+        })
+        .parse(r.params);
+      const [row] = await db.query(
+        `SELECT i.mime,i.bytes FROM note_column_shares s
          JOIN note_columns c ON c.id=s.column_id AND c.deleted_at IS NULL
          JOIN notes n ON n.column_id=c.id AND n.deleted_at IS NULL
          JOIN note_images i ON i.note_id=n.id AND i.deleted_at IS NULL
         WHERE s.token_hash=$1 AND s.revoked_at IS NULL AND s.expires_at>now() AND i.id=$2`,
-      [digest(p.token), p.imageId],
-    );
-    if (!row) fail(404, "NOT_FOUND", "图片不存在");
-    return reply
-      .type(row.mime)
-      .header("Cache-Control", "no-store")
-      .send(Buffer.from(row.bytes));
-  });
-  app.get("/api/v1/share/notes/:token/images/:imageId", async (r, reply) => {
-    const p = z
-      .object({
-        token: z.string().min(32).max(128),
-        imageId: z.string().min(1).max(64),
-      })
-      .parse(r.params);
-    const [row] = await db.query(
-      `SELECT i.mime,i.bytes FROM note_shares s
+        [digest(p.token), p.imageId],
+      );
+      if (!row) fail(404, "NOT_FOUND", "图片不存在");
+      return reply
+        .type(row.mime)
+        .header("Cache-Control", "no-store")
+        .send(Buffer.from(row.bytes));
+    },
+  );
+  app.get(
+    "/api/v1/share/notes/:token/images/:imageId",
+    { config: { rateLimit: { max: 600, timeWindow: "1 minute" } } },
+    async (r, reply) => {
+      const p = z
+        .object({
+          token: z.string().min(32).max(128),
+          imageId: z.string().min(1).max(64),
+        })
+        .parse(r.params);
+      const [row] = await db.query(
+        `SELECT i.mime,i.bytes FROM note_shares s
          JOIN notes n ON n.id=s.note_id AND n.deleted_at IS NULL
          JOIN note_images i ON i.note_id=n.id AND i.deleted_at IS NULL
         WHERE s.token_hash=$1 AND s.revoked_at IS NULL AND s.expires_at>now()
           AND i.id=$2`,
-      [digest(p.token), p.imageId],
-    );
-    if (!row) fail(404, "NOT_FOUND", "图片不存在");
-    return reply
-      .type(row.mime)
-      .header("Cache-Control", "no-store")
-      .send(Buffer.from(row.bytes));
-  });
+        [digest(p.token), p.imageId],
+      );
+      if (!row) fail(404, "NOT_FOUND", "图片不存在");
+      return reply
+        .type(row.mime)
+        .header("Cache-Control", "no-store")
+        .send(Buffer.from(row.bytes));
+    },
+  );
   app.get("/api/v1/share/notes/:token", async (r) => {
     const token = z.object({ token: z.string().min(32).max(128) }).parse(r.params).token;
     const [row] = await db.query(

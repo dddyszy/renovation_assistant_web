@@ -70,6 +70,16 @@ test("存储迁移默认预检，保留金额/JSON/软删除并拒绝覆盖非�
       [JSON.stringify(["插座位置", "保留管线照片"])],
     );
     await db.query(
+      "INSERT INTO note_shares(id,note_id,family_id,project_id,token_hash,created_by,expires_at) VALUES('ns','n','f','p','share-hash','u',now()+interval '7 days')",
+    );
+    await db.query(
+      "INSERT INTO note_column_shares(id,column_id,family_id,project_id,token_hash,created_by,expires_at) VALUES('ncs','nc','f','p','column-share-hash','u',now()+interval '7 days')",
+    );
+    await db.query(
+      "INSERT INTO note_images(id,note_id,family_id,project_id,mime,width,height,bytes,created_by) VALUES('ni','n','f','p','image/png',1,1,$1,'u')",
+      [Buffer.from("89504e470d0a1a0a", "hex")],
+    );
+    await db.query(
       "INSERT INTO user_preferences(user_id,family_id,project_id) VALUES('u','f','p')",
     );
     await db.query(
@@ -114,6 +124,18 @@ test("存储迁移默认预检，保留金额/JSON/软删除并拒绝覆盖非�
       0,
     );
     assert.equal((await db.query("SELECT * FROM user_preferences"))[0]?.projectId, "p");
+    assert.equal(
+      (await db.query("SELECT count(*)::int AS count FROM note_shares"))[0]?.count,
+      1,
+    );
+    assert.equal(
+      (await db.query("SELECT count(*)::int AS count FROM note_column_shares"))[0]?.count,
+      1,
+    );
+    assert.equal(
+      (await db.query("SELECT mime FROM note_images WHERE id='ni'"))[0]?.mime,
+      "image/png",
+    );
     assert.equal(
       (await db.query("SELECT password_hash FROM users"))[0]?.passwordHash,
       "fixture-only-hash",

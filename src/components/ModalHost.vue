@@ -39,6 +39,12 @@ const stages = useProjectQuery("stages"),
 const viewColumn = computed(
   () => columns.data.value?.data?.find((c) => c.id === w.editing?.columnId)?.name || "",
 );
+const shareExpiryText = computed(() => {
+  if (!shareExpiresAt.value) return "";
+  const date = new Date(shareExpiresAt.value);
+  if (Number.isNaN(date.getTime())) return "";
+  return `链接有效期至 ${date.getFullYear()}.${String(date.getMonth() + 1).padStart(2, "0")}.${String(date.getDate()).padStart(2, "0")}`;
+});
 const materials = ref<Material[]>([]),
   requestId = ref(""),
   priorFocus = ref<HTMLElement>();
@@ -283,6 +289,7 @@ async function save() {
     const f = form.value,
       e = w.editing?.id ? w.editing : null,
       type = w.modal;
+    let imageWarning = "";
     if (type === "destroyProject") {
       await request(w.base, "DELETE", {
         confirmName: f.confirmName,
@@ -382,13 +389,17 @@ async function save() {
         payload,
       );
       if (type === "note" && !e && pendingImages.value.length && saved.data?.id) {
-        for (const image of pendingImages.value)
-          await request(`${w.base}/notes/${saved.data.id}/images`, "POST", {
-            data: image.data,
-            mime: image.mime,
-            width: image.width,
-            height: image.height,
-          });
+        try {
+          for (const image of pendingImages.value)
+            await request(`${w.base}/notes/${saved.data.id}/images`, "POST", {
+              data: image.data,
+              mime: image.mime,
+              width: image.width,
+              height: image.height,
+            });
+        } catch {
+          imageWarning = "备忘已保存，但部分图片上传失败，请编辑后重新添加";
+        }
         pendingImages.value = [];
       }
       if (type === "cost") {
@@ -397,7 +408,7 @@ async function save() {
       }
     }
     await refresh();
-    w.notify(w.editing?.id ? "修改已保存" : "已保存到家庭手记");
+    w.notify(imageWarning || (w.editing?.id ? "修改已保存" : "已保存到家庭手记"));
     if (type === "cost" && keepAdding.value && !e) {
       resetCost();
       localMessage.value = "上一笔已保存，可以继续记录";
@@ -442,6 +453,8 @@ async function addImages(event: Event) {
         noteImages.value.push(data);
       } else pendingImages.value.push(prepared);
     }
+    if (w.editing?.id)
+      await client.invalidateQueries({ queryKey: ["project", w.fid, w.pid] });
   } catch (e) {
     error.value = errorMessage(e);
   } finally {
@@ -454,6 +467,7 @@ async function removeNoteImage(imageId: string) {
   try {
     await request(`${w.base}/notes/${w.editing.id}/images/${imageId}`, "DELETE");
     noteImages.value = noteImages.value.filter((image) => image.id !== imageId);
+    await client.invalidateQueries({ queryKey: ["project", w.fid, w.pid] });
   } catch (e) {
     error.value = errorMessage(e);
   } finally {
@@ -735,11 +749,8 @@ function copyPrevious() {
                   </div>
                   <p class="field-help">
                     {{
-                      shareExpiresAt
-                        ? `链接有效期至 ${shareExpiresAt.slice(0, 10).replaceAll("-", ".")}`
-                        : shareUrl
-                          ? "链接永久有效"
-                          : "生成后按所选有效期生效"
+                      shareExpiryText ||
+                      (shareUrl ? "链接永久有效" : "生成后按所选有效期生效")
                     }}，任何人可只读查看，无需登录；重新生成或停止分享会让旧链接失效。
                   </p>
                 </div>
