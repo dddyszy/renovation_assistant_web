@@ -17,6 +17,14 @@ import { checkLinks, resource } from "../lib/resources.ts";
 import { noteSchema, required, version } from "../schemas.ts";
 import { importProjectNotes, readProjectNotes } from "../services/notes-transfer.ts";
 
+const shareDuration = z.object({
+  // 0 means permanent; it is stored as a far-future timestamp so existing queries stay simple.
+  days: z.union([z.literal(0), z.literal(7), z.literal(30)]).default(7),
+});
+const PERMANENT_EXPIRY = new Date("9999-12-31T23:59:59.000Z");
+const shareExpiry = (days: number) =>
+  days === 0 ? PERMANENT_EXPIRY : new Date(Date.now() + days * 24 * 3600e3);
+
 export function registerNotesRoutes(app: FastifyInstance, context: RequestContext) {
   const { db, project, allow, writeTransaction } = context;
   app.get(`${scope}/notes/export`, { preHandler: project }, async (r) => {
@@ -173,6 +181,7 @@ export function registerNotesRoutes(app: FastifyInstance, context: RequestContex
   });
   app.post(`${scope}/notes/:rid/share`, { preHandler: project }, async (r) => {
     allow(r);
+    const b = shareDuration.parse(r.body ?? {});
     return data(
       await writeTransaction(r, async (tx) => {
         const note = await resource(tx, r, "notes", param(r, "rid"));
@@ -181,7 +190,7 @@ export function registerNotesRoutes(app: FastifyInstance, context: RequestContex
           [note.id],
         );
         const token = randomBytes(32).toString("hex");
-        const expiresAt = new Date(Date.now() + 7 * 24 * 3600e3);
+        const expiresAt = shareExpiry(b.days);
         await insert(tx, "note_shares", {
           id: id(),
           note_id: note.id,
@@ -192,7 +201,11 @@ export function registerNotesRoutes(app: FastifyInstance, context: RequestContex
           expires_at: expiresAt,
         });
         await audit(tx, r, "分享备忘", "notes", note.id, note.title);
-        return { token, path: `/share/note/${token}`, expiresAt };
+        return {
+          token,
+          path: `/share/note/${token}`,
+          expiresAt: b.days === 0 ? null : expiresAt,
+        };
       }),
     );
   });
@@ -301,6 +314,7 @@ export function registerNotesRoutes(app: FastifyInstance, context: RequestContex
   );
   app.post(`${scope}/note-columns/:rid/share`, { preHandler: project }, async (r) => {
     allow(r);
+    const b = shareDuration.parse(r.body ?? {});
     return data(
       await writeTransaction(r, async (tx) => {
         const column = await resource(tx, r, "note_columns", param(r, "rid"));
@@ -309,7 +323,7 @@ export function registerNotesRoutes(app: FastifyInstance, context: RequestContex
           [column.id],
         );
         const token = randomBytes(32).toString("hex");
-        const expiresAt = new Date(Date.now() + 7 * 24 * 3600e3);
+        const expiresAt = shareExpiry(b.days);
         await insert(tx, "note_column_shares", {
           id: id(),
           column_id: column.id,
@@ -320,7 +334,11 @@ export function registerNotesRoutes(app: FastifyInstance, context: RequestContex
           expires_at: expiresAt,
         });
         await audit(tx, r, "分享备忘专栏", "note_columns", column.id, column.name);
-        return { token, path: `/share/column/${token}`, expiresAt };
+        return {
+          token,
+          path: `/share/column/${token}`,
+          expiresAt: b.days === 0 ? null : expiresAt,
+        };
       }),
     );
   });

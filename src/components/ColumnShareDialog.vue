@@ -9,6 +9,8 @@ const props = defineProps<{ column: NoteColumn }>();
 const emit = defineEmits<{ close: [] }>();
 const w = useWorkspace();
 const url = ref("");
+const expiresAt = ref("");
+const days = ref<0 | 7 | 30>(7);
 const busy = ref(false);
 const copied = ref(false);
 const error = ref("");
@@ -18,12 +20,13 @@ async function create() {
   error.value = "";
   copied.value = false;
   try {
-    const { data } = await request<{ path: string }>(
+    const { data } = await request<{ path: string; expiresAt: string | null }>(
       `${w.base}/note-columns/${props.column.id}/share`,
       "POST",
-      {},
+      { days: days.value },
     );
     url.value = new URL(data.path, window.location.origin).toString();
+    expiresAt.value = data.expiresAt || "";
   } catch (e) {
     error.value = errorMessage(e);
   } finally {
@@ -35,6 +38,7 @@ async function stop() {
   try {
     await request(`${w.base}/note-columns/${props.column.id}/share`, "DELETE");
     url.value = "";
+    expiresAt.value = "";
     w.notify("已停止分享");
   } catch (e) {
     error.value = errorMessage(e);

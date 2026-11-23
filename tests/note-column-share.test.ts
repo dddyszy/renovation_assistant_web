@@ -96,8 +96,15 @@ after(async () => {
 
 test("专栏分享免登录查看全部备忘和图片，撤销后失效", async () => {
   const { cookie, base, columnId, notes, imageId } = await workspace();
-  const share = await api(`${base}/note-columns/${columnId}/share`, "POST", {}, cookie);
+  const share = await api(
+    `${base}/note-columns/${columnId}/share`,
+    "POST",
+    { days: 30 },
+    cookie,
+  );
   assert.equal(share.status, 200, JSON.stringify(share.json));
+  const lifetime = Date.parse(share.json.data.expiresAt) - Date.now();
+  assert.ok(lifetime > 29 * 24 * 3600e3 && lifetime < 30 * 24 * 3600e3 + 5000);
   const token = share.json.data.token as string;
   assert.equal(share.json.data.path, `/share/column/${token}`);
 

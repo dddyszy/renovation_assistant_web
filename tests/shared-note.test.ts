@@ -72,8 +72,14 @@ after(async () => {
 
 test("分享链接无需登录即可只读查看，撤销后失效", async () => {
   const { cookie, base, noteId } = await workspace();
-  const share = await api(`${base}/notes/${noteId}/share`, "POST", {}, cookie);
+  const share = await api(`${base}/notes/${noteId}/share`, "POST", { days: 7 }, cookie);
   assert.equal(share.status, 200, JSON.stringify(share.json));
+  const lifetime = Date.parse(share.json.data.expiresAt) - Date.now();
+  assert.ok(lifetime > 6.9 * 24 * 3600e3 && lifetime < 7 * 24 * 3600e3 + 5000);
+  assert.equal(
+    (await api(`${base}/notes/${noteId}/share`, "POST", { days: 1 }, cookie)).status,
+    422,
+  );
   const token = share.json.data.token as string;
   assert.equal(share.json.data.path, `/share/note/${token}`);
 
@@ -90,6 +96,16 @@ test("分享链接无需登录即可只读查看，撤销后失效", async () =>
   const revoked = await api(`${base}/notes/${noteId}/share`, "DELETE", {}, cookie);
   assert.equal(revoked.status, 200);
   assert.equal((await api(`/share/notes/${token}`)).status, 404);
+
+  const permanent = await api(
+    `${base}/notes/${noteId}/share`,
+    "POST",
+    { days: 0 },
+    cookie,
+  );
+  assert.equal(permanent.status, 200);
+  assert.equal(permanent.json.data.expiresAt, null);
+  assert.equal((await api(`/share/notes/${permanent.json.data.token}`)).status, 200);
 });
 
 test("重新分享会作废旧链接，过期或删除的备忘不可访问", async () => {
