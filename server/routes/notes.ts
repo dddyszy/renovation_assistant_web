@@ -209,10 +209,120 @@ export function registerNotesRoutes(app: FastifyInstance, context: RequestContex
       }),
     );
   });
+  const imageBody = z.object({
+    data: z.string().min(1).max(6_000_000),
+    mime: z.enum(["image/jpeg", "image/png", "image/webp"]),
+    width: z.number().int().min(0).max(10000).default(0),
+    height: z.number().int().min(0).max(10000).default(0),
+  });
+  app.post(
+    `${scope}/notes/:rid/images`,
+    { preHandler: project, bodyLimit: 8 * 1024 * 1024 },
+    async (r) => {
+      allow(r);
+      const b = imageBody.parse(r.body);
+      const bytes = Buffer.from(b.data, "base64");
+      if (bytes.length < 16 || bytes.length > 3 * 1024 * 1024)
+        fail(422, "INVALID_IMAGE", "图片需小于 3MB");
+      const detected = imageMime(bytes);
+      if (!detected || detected !== b.mime)
+        fail(422, "INVALID_IMAGE", "仅支持 JPEG、PNG 或 WebP 图片");
+      return data(
+        await writeTransaction(r, async (tx) => {
+          const note = await resource(tx, r, "notes", param(r, "rid"));
+          const [count] = await tx.query(
+            "SELECT count(*)::int AS count FROM note_images WHERE note_id=$1 AND deleted_at IS NULL",
+            [note.id],
+          );
+          if (count!.count >= 6) fail(422, "LIMIT", "每条备忘最多 6 张图片");
+          const image = await insert(tx, "note_images", {
+            id: id(),
+            note_id: note.id,
+            family_id: r.familyId,
+            project_id: r.project.id,
+            mime: b.mime,
+            width: b.width,
+            height: b.height,
+            bytes,
+            sort_order: count!.count,
+            created_by: r.user.id,
+          });
+          await audit(tx, r, "上传备忘图片", "notes", note.id, note.title);
+          return {
+            id: image.id,
+            mime: image.mime,
+            width: image.width,
+            height: image.height,
+          };
+        }),
+      );
+    },
+  );
+  app.get(
+    `${scope}/notes/:rid/images/:imageId`,
+    { preHandler: project },
+    async (r, reply) => {
+      const [row] = await db.query(
+        `SELECT i.mime,i.bytes FROM note_images i
+           JOIN notes n ON n.id=i.note_id AND n.deleted_at IS NULL
+          WHERE i.id=$1 AND i.note_id=$2 AND i.family_id=$3 AND i.project_id=$4
+            AND n.family_id=$3 AND n.project_id=$4 AND i.deleted_at IS NULL`,
+        [param(r, "imageId"), param(r, "rid"), r.familyId, r.project.id],
+      );
+      if (!row) fail(404, "NOT_FOUND", "图片不存在");
+      return reply
+        .type(row.mime)
+        .header("Cache-Control", "private, max-age=300")
+        .send(Buffer.from(row.bytes));
+    },
+  );
+  app.delete(
+    `${scope}/notes/:rid/images/:imageId`,
+    { preHandler: project },
+    async (r) => {
+      allow(r);
+      return data(
+        await writeTransaction(r, async (tx) => {
+          const note = await resource(tx, r, "notes", param(r, "rid"));
+          const [image] = await tx.query(
+            "SELECT id FROM note_images WHERE id=$1 AND note_id=$2 AND family_id=$3 AND project_id=$4 AND deleted_at IS NULL",
+            [param(r, "imageId"), note.id, r.familyId, r.project.id],
+          );
+          if (!image) fail(404, "NOT_FOUND", "图片不存在");
+          await tx.query("UPDATE note_images SET deleted_at=now() WHERE id=$1", [
+            image.id,
+          ]);
+          await audit(tx, r, "删除备忘图片", "notes", note.id, note.title);
+          return { deleted: true };
+        }),
+      );
+    },
+  );
+  app.get("/api/v1/share/notes/:token/images/:imageId", async (r, reply) => {
+    const p = z
+      .object({
+        token: z.string().min(32).max(128),
+        imageId: z.string().min(1).max(64),
+      })
+      .parse(r.params);
+    const [row] = await db.query(
+      `SELECT i.mime,i.bytes FROM note_shares s
+         JOIN notes n ON n.id=s.note_id AND n.deleted_at IS NULL
+         JOIN note_images i ON i.note_id=n.id AND i.deleted_at IS NULL
+        WHERE s.token_hash=$1 AND s.revoked_at IS NULL AND s.expires_at>now()
+          AND i.id=$2`,
+      [digest(p.token), p.imageId],
+    );
+    if (!row) fail(404, "NOT_FOUND", "图片不存在");
+    return reply
+      .type(row.mime)
+      .header("Cache-Control", "no-store")
+      .send(Buffer.from(row.bytes));
+  });
   app.get("/api/v1/share/notes/:token", async (r) => {
     const token = z.object({ token: z.string().min(32).max(128) }).parse(r.params).token;
     const [row] = await db.query(
-      `SELECT n.title,n.details,n.starred,n.status,n.created_at,n.updated_at,
+      `SELECT n.id,n.title,n.details,n.starred,n.status,n.created_at,n.updated_at,
               u.nickname AS creator_name,c.name AS column_name
          FROM note_shares s
          JOIN notes n ON n.id=s.note_id AND n.deleted_at IS NULL
@@ -222,9 +332,15 @@ export function registerNotesRoutes(app: FastifyInstance, context: RequestContex
       [digest(token)],
     );
     if (!row) fail(404, "NOT_FOUND", "分享链接不存在或已过期");
+    const images = await db.query(
+      `SELECT id,mime,width,height FROM note_images
+        WHERE note_id=$1 AND deleted_at IS NULL ORDER BY sort_order,created_at`,
+      [row.id],
+    );
     return data({
       title: row.title,
       details: row.details,
+      images,
       starred: row.starred,
       status: row.status,
       columnName: row.columnName,
@@ -262,4 +378,25 @@ export function registerNotesRoutes(app: FastifyInstance, context: RequestContex
       }),
     );
   });
+}
+
+function imageMime(bytes: Buffer): string | null {
+  if (bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff) return "image/jpeg";
+  if (
+    bytes[0] === 0x89 &&
+    bytes[1] === 0x50 &&
+    bytes[2] === 0x4e &&
+    bytes[3] === 0x47 &&
+    bytes[4] === 0x0d &&
+    bytes[5] === 0x0a &&
+    bytes[6] === 0x1a &&
+    bytes[7] === 0x0a
+  )
+    return "image/png";
+  if (
+    bytes.subarray(0, 4).toString("ascii") === "RIFF" &&
+    bytes.subarray(8, 12).toString("ascii") === "WEBP"
+  )
+    return "image/webp";
+  return null;
 }

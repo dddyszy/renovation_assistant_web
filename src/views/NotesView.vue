@@ -17,6 +17,7 @@ import { useProjectQuery } from "../composables/useProjectQuery";
 import { request, errorMessage } from "../services/api";
 import QueryState from "../components/QueryState.vue";
 import LinkText from "../components/LinkText.vue";
+import { noteImagePath } from "../services/images";
 import EmptyState from "../components/EmptyState.vue";
 import NotesTransfer from "../components/NotesTransfer.vue";
 const transferOpen = ref(false);
@@ -278,6 +279,16 @@ watch(
         <ul v-if="n.details.length">
           <li v-for="(d, i) in n.details" :key="i"><LinkText :text="d" /></li>
         </ul>
+        <div v-if="n.images?.length" class="note-card-images">
+          <img
+            v-for="image in n.images.slice(0, 3)"
+            :key="image.id"
+            :src="noteImagePath(w.base, n.id, image.id)"
+            alt=""
+            loading="lazy"
+          />
+          <span v-if="n.images.length > 3">+{{ n.images.length - 3 }}</span>
+        </div>
         <footer>
           {{ n.creatorName }}记录 ·
           {{ n.createdAt.slice(0, 10).replaceAll("-", ".") }}

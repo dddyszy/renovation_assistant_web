@@ -6,6 +6,9 @@ import { errorMessage, request } from "../services/api";
 import type { SharedNote } from "../../shared/api";
 
 const token = useRoute().params.token as string;
+function shareImageUrl(id: string) {
+  return `/api/v1/share/notes/${token}/images/${id}`;
+}
 const note = ref<SharedNote | null>(null);
 const error = ref("");
 
@@ -32,6 +35,17 @@ onMounted(async () => {
         <li v-for="(d, i) in note.details" :key="i"><LinkText :text="d" /></li>
       </ul>
       <p v-else class="share-empty">暂无具体描述</p>
+      <div v-if="note.images?.length" class="share-images">
+        <a
+          v-for="image in note.images"
+          :key="image.id"
+          :href="shareImageUrl(image.id)"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          <img :src="shareImageUrl(image.id)" :alt="note.title" loading="lazy" />
+        </a>
+      </div>
       <footer>
         {{ note.creatorName }}记录 ·
         {{ note.createdAt.slice(0, 10).replaceAll("-", ".") }}
