@@ -1270,3 +1270,18 @@
   margin-top: 24px;
   border-top: 1px dashed #e7ddcd;
 }
+.share-expiry {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 11px;
+  color: #8f7b62;
+}
+.share-expiry select {
+  padding: 6px 9px;
+  border: 1px solid #e1d5c4;
+  border-radius: 6px;
+  background: #fffdf9;
+  color: #5f4d3a;
+  font-size: 12px;
+}

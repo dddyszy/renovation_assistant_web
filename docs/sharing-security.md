@@ -14,7 +14,7 @@ sequenceDiagram
     API->>API: 校验会话、项目权限和归档状态
     API->>API: 生成 32 字节随机 token
     API->>DB: 撤销旧链接并保存 token 的 SHA-256 哈希
-    API-->>Member: 返回 /share/note/:token，7 天有效
+    API-->>Member: 返回 /share/note/:token，有效期 7/30 天或永久
     Visitor->>API: GET /api/v1/share/notes/:token
     API->>DB: 按哈希查找未撤销、未过期的链接
     API-->>Visitor: 仅返回分享所需字段
@@ -24,7 +24,7 @@ sequenceDiagram
 
 - 创建：可写成员调用 `POST /families/:fid/projects/:pid/notes/:rid/share`。
 - 查看：访问 `/share/note/:token`，前端请求公开只读 API。
-- 过期：默认创建后 7 天。
+- 过期：创建时可选 7 天、30 天或永久；默认 7 天。
 - 撤销：查看弹窗中停止分享，或重新生成链接，所有旧链接立即失效。
 - 删除：备忘被软删除后，即使令牌未过期也返回 404。
 

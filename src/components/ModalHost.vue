@@ -27,6 +27,8 @@ const w = useWorkspace(),
   panel = ref<HTMLElement>(),
   deleteConfirm = ref(false),
   shareUrl = ref(""),
+  shareExpiresAt = ref(""),
+  shareDays = ref<0 | 7 | 30>(7),
   shareBusy = ref(false),
   imageInput = ref<HTMLInputElement>(),
   imageBusy = ref(false),
@@ -116,6 +118,7 @@ watch(
     error.value = "";
     deleteConfirm.value = false;
     shareUrl.value = "";
+    shareExpiresAt.value = "";
     noteImages.value = [];
     pendingImages.value = [];
     localMessage.value = "";
@@ -462,12 +465,13 @@ async function createShare() {
   shareBusy.value = true;
   error.value = "";
   try {
-    const { data } = await request<{ path: string }>(
+    const { data } = await request<{ path: string; expiresAt: string | null }>(
       `${w.base}/notes/${w.editing.id}/share`,
       "POST",
-      {},
+      { days: shareDays.value },
     );
     shareUrl.value = new URL(data.path, window.location.origin).toString();
+    shareExpiresAt.value = data.expiresAt || "";
   } catch (e) {
     error.value = errorMessage(e);
   } finally {
@@ -492,6 +496,7 @@ async function stopShare() {
   try {
     await request(`${w.base}/notes/${w.editing.id}/share`, "DELETE", {});
     shareUrl.value = "";
+    shareExpiresAt.value = "";
     w.notify("已停止分享");
   } catch (e) {
     error.value = errorMessage(e);
@@ -697,6 +702,14 @@ function copyPrevious() {
                   {{ (w.editing?.createdAt || "").slice(0, 10).replaceAll("-", ".") }}
                 </p>
                 <div v-if="w.canWrite" class="note-share">
+                  <label class="share-expiry"
+                    >有效期
+                    <select v-model.number="shareDays" :disabled="shareBusy">
+                      <option :value="7">7 天</option>
+                      <option :value="30">30 天</option>
+                      <option :value="0">永久</option>
+                    </select>
+                  </label>
                   <button
                     type="button"
                     class="btn secondary small-btn"
@@ -721,8 +734,13 @@ function copyPrevious() {
                     </button>
                   </div>
                   <p class="field-help">
-                    链接 7
-                    天内有效，任何人可只读查看，无需登录；重新生成或停止分享会让旧链接失效。
+                    {{
+                      shareExpiresAt
+                        ? `链接有效期至 ${shareExpiresAt.slice(0, 10).replaceAll("-", ".")}`
+                        : shareUrl
+                          ? "链接永久有效"
+                          : "生成后按所选有效期生效"
+                    }}，任何人可只读查看，无需登录；重新生成或停止分享会让旧链接失效。
                   </p>
                 </div>
               </div>
