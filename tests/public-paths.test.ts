@@ -9,12 +9,21 @@ test("分享链接与登录页属于公开路径", () => {
     "/reset-password",
     "/share/note/abc123",
     "/share/note/abc123/",
+    "/share/column/abc123",
   ])
     assert.equal(isPublicPath(path), true, path);
 });
 
 test("业务页面仍然是受保护路径", () => {
-  for (const path of ["/", "/notes", "/ledger", "/statistics", "/share", "/share/note"])
+  for (const path of [
+    "/",
+    "/notes",
+    "/ledger",
+    "/statistics",
+    "/share",
+    "/share/note",
+    "/share/column",
+  ])
     assert.equal(isPublicPath(path), false, path);
 });
 

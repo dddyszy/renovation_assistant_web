@@ -30,12 +30,18 @@ sequenceDiagram
 
 `note_shares` 保存令牌哈希、创建者、有效期和撤销时间；数据库没有可直接使用的明文令牌。重新生成采用先撤销旧链接、再插入新链接的事务。
 
+## 专栏分享
+
+专栏分享使用独立的 `note_column_shares` 表和 `/share/column/:token` 页面。公开接口返回专栏名、记录人、总条数以及最多 200 条有效备忘，每条含描述、状态、记录人和图片元数据；不返回家庭或项目标识。
+
+专栏图片通过 `/share/columns/:token/images/:imageId` 读取，必须同时匹配有效专栏令牌和图片 ID。专栏、备忘或图片被删除后返回 404。重新生成链接会撤销该专栏的旧链接。
+
 ## 公开路由
 
 `src/router/public-paths.ts` 是唯一的路径分类来源：
 
 - 认证页：`/login`、`/register`、`/reset-password`。
-- 公开分享页：`/share/note/*`。
+- 公开分享页：`/share/note/*`、`/share/column/*`。
 - 其他业务页仍需要登录。
 
 应用等待 `router.isReady()` 后才挂载，避免首次加载时把分享地址误判为 `/`。只有认证页会把已登录用户送回首页，分享页在登录前后均保持可见。

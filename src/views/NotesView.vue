@@ -18,6 +18,8 @@ import { request, errorMessage } from "../services/api";
 import QueryState from "../components/QueryState.vue";
 import LinkText from "../components/LinkText.vue";
 import { noteImagePath } from "../services/images";
+import ColumnShareDialog from "../components/ColumnShareDialog.vue";
+import type { NoteColumn } from "../../shared/api";
 import EmptyState from "../components/EmptyState.vue";
 import NotesTransfer from "../components/NotesTransfer.vue";
 const transferOpen = ref(false);
@@ -31,7 +33,8 @@ const w = useWorkspace(),
   page = ref(1),
   error = ref(""),
   managing = ref(false),
-  busy = ref(false);
+  busy = ref(false),
+  shareColumn = ref<NoteColumn | null>(null);
 watch(
   () => columns.data.value?.data,
   (list) => {
@@ -134,6 +137,11 @@ watch(
       </button>
     </div>
   </div>
+  <ColumnShareDialog
+    v-if="shareColumn"
+    :column="shareColumn"
+    @close="shareColumn = null"
+  />
   <NotesTransfer
     v-if="transferOpen"
     :columns="columns.data.value?.data || []"
@@ -174,7 +182,8 @@ watch(
           {{ c.name }}<span v-if="columnId === c.id" class="nav-dot" />
         </button>
         <div v-if="managing && w.canWrite" class="column-tools">
-          <button class="text-btn" @click="w.open('column', c)">改名 / 删除</button
+          <button class="text-btn" @click="shareColumn = c">分享专栏</button
+          ><button class="text-btn" @click="w.open('column', c)">改名 / 删除</button
           ><button
             class="icon-btn"
             aria-label="上移专栏"

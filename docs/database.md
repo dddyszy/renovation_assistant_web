@@ -21,6 +21,7 @@
 | note_columns / notes | 专栏、需求项、多条描述、重点与确认状态               |
 | note_shares          | 只读分享令牌哈希、有效期与撤销时间                   |
 | note_images          | 备忘图片二进制、MIME、尺寸、顺序与软删除             |
+| note_column_shares   | 专栏分享令牌哈希、有效期与撤销时间                   |
 | user_preferences     | 用户当前家庭与项目                                   |
 | audit_logs           | 操作者、动作、对象和时间，不是逐字段历史快照         |
 
