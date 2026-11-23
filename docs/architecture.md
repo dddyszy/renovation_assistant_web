@@ -1,6 +1,6 @@
 # 架构说明
 
-版本：0.9.17。应用由 Vue 响应式前端、Fastify API 和可替换的 PostgreSQL 存储适配层组成。
+版本：0.9.18。应用由 Vue 响应式前端、Fastify API 和可替换的 PostgreSQL 存储适配层组成。
 
 ```mermaid
 flowchart LR
