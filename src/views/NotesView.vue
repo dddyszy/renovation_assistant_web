@@ -17,6 +17,9 @@ import { useProjectQuery } from "../composables/useProjectQuery";
 import { request, errorMessage } from "../services/api";
 import QueryState from "../components/QueryState.vue";
 import LinkText from "../components/LinkText.vue";
+import { noteImagePath } from "../services/images";
+import ColumnShareDialog from "../components/ColumnShareDialog.vue";
+import type { NoteColumn } from "../../shared/api";
 import EmptyState from "../components/EmptyState.vue";
 import NotesTransfer from "../components/NotesTransfer.vue";
 const transferOpen = ref(false);
@@ -30,7 +33,8 @@ const w = useWorkspace(),
   page = ref(1),
   error = ref(""),
   managing = ref(false),
-  busy = ref(false);
+  busy = ref(false),
+  shareColumn = ref<NoteColumn | null>(null);
 watch(
   () => columns.data.value?.data,
   (list) => {
@@ -133,6 +137,11 @@ watch(
       </button>
     </div>
   </div>
+  <ColumnShareDialog
+    v-if="shareColumn"
+    :column="shareColumn"
+    @close="shareColumn = null"
+  />
   <NotesTransfer
     v-if="transferOpen"
     :columns="columns.data.value?.data || []"
@@ -173,7 +182,8 @@ watch(
           {{ c.name }}<span v-if="columnId === c.id" class="nav-dot" />
         </button>
         <div v-if="managing && w.canWrite" class="column-tools">
-          <button class="text-btn" @click="w.open('column', c)">改名 / 删除</button
+          <button class="text-btn" @click="shareColumn = c">分享专栏</button
+          ><button class="text-btn" @click="w.open('column', c)">改名 / 删除</button
           ><button
             class="icon-btn"
             aria-label="上移专栏"
@@ -278,6 +288,16 @@ watch(
         <ul v-if="n.details.length">
           <li v-for="(d, i) in n.details" :key="i"><LinkText :text="d" /></li>
         </ul>
+        <div v-if="n.images?.length" class="note-card-images">
+          <img
+            v-for="image in n.images.slice(0, 3)"
+            :key="image.id"
+            :src="noteImagePath(w.base, n.id, image.id)"
+            alt=""
+            loading="lazy"
+          />
+          <span v-if="n.images.length > 3">+{{ n.images.length - 3 }}</span>
+        </div>
         <footer>
           {{ n.creatorName }}记录 ·
           {{ n.createdAt.slice(0, 10).replaceAll("-", ".") }}

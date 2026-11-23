@@ -1,6 +1,6 @@
 # API 参考
 
-版本：0.9.17，前缀 `/api/v1`。以下为当前实现摘要，字段约束以 `server/schemas.ts`、`server/routes/` 和 `server/schema.sql` 为准。
+版本：0.9.18，前缀 `/api/v1`。以下为当前实现摘要，字段约束以 `server/schemas.ts`、`server/routes/` 和 `server/schema.sql` 为准。
 
 ## 通用约定
 
@@ -95,13 +95,35 @@
 
 ## 备忘只读分享
 
-| 方法   | 路径                                            | 说明                                                   |
-| ------ | ----------------------------------------------- | ------------------------------------------------------ |
-| POST   | `/families/:fid/projects/:pid/notes/:rid/share` | 创建 7 天有效的只读链接，返回 `token` 与 `path`        |
-| DELETE | `/families/:fid/projects/:pid/notes/:rid/share` | 停止分享，旧链接立即失效                               |
-| GET    | `/share/notes/:token`                           | 公开只读接口，无需登录；过期、撤销或备忘已删除返回 404 |
+| 方法   | 路径                                            | 说明                                                                                                       |
+| ------ | ----------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| POST   | `/families/:fid/projects/:pid/notes/:rid/share` | 创建只读链接，`{days}` 可选 7、30 或 0（永久，默认 7），返回 `token`、`path` 与 `expiresAt`（永久为 null） |
+| DELETE | `/families/:fid/projects/:pid/notes/:rid/share` | 停止分享，旧链接立即失效                                                                                   |
+| GET    | `/share/notes/:token`                           | 公开只读接口，无需登录；过期、撤销或备忘已删除返回 404                                                     |
 
-分享接口只返回标题、描述、状态、专栏名和记录人，不含家庭、项目或账号标识。
+分享接口只返回标题、描述、图片元数据、状态、专栏名和记录人，不含家庭、项目或账号标识。
+
+## 备忘专栏分享
+
+| 方法与路径                                                    | 说明                                                                                                         |
+| ------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
+| POST `/families/:fid/projects/:pid/note-columns/:rid/share`   | 创建专栏只读链接，`{days}` 可选 7、30 或 0（永久，默认 7），返回 `token`、`path`、`expiresAt`（永久为 null） |
+| DELETE `/families/:fid/projects/:pid/note-columns/:rid/share` | 停止分享，旧链接立即失效                                                                                     |
+| GET `/share/columns/:token`                                   | 公开只读；返回专栏名、记录人、总条数和最多 200 条有效备忘（含图片元数据）                                    |
+| GET `/share/columns/:token/images/:imageId`                   | 公开只读图片；分享撤销、过期、专栏或备忘删除后返回 404                                                       |
+
+重新生成会撤销该专栏所有旧链接。专栏被删除后，即使令牌未过期也返回 404。
+
+## 备忘图片
+
+| 方法与路径                                                       | 说明                                                                               |
+| ---------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
+| POST `/families/:fid/projects/:pid/notes/:rid/images`            | JSON `{data,mime,width,height}`，`data` 为 base64；解码后 ≤ 3MB，单条备忘最多 6 张 |
+| GET `/families/:fid/projects/:pid/notes/:rid/images/:imageId`    | 返回二进制图片；需要登录，`Cache-Control: private, max-age=300`                    |
+| DELETE `/families/:fid/projects/:pid/notes/:rid/images/:imageId` | 软删除图片                                                                         |
+| GET `/share/notes/:token/images/:imageId`                        | 公开只读图片；分享撤销、过期或备忘删除后返回 404                                   |
+
+上传只接受 JPEG、PNG、WebP，并按文件头校验真实类型；声明类型不一致返回 422 `INVALID_IMAGE`。单条上限 6 张返回 422 `LIMIT`，请求体上限 8MB。列表和写入响应中的 `images` 只包含 `id`、`mime`、`width`、`height`，不返回二进制内容。
 
 ## 备忘文件交换（0.9.6）
 

@@ -1,6 +1,6 @@
 # 内置与外置存储迁移
 
-适用版本：0.9.17。`scripts/migrate-storage.ts` 用于本 Web 应用的 PGlite 与 PostgreSQL 之间复制账号和业务数据，可以双向迁移。它不处理原微信云开发集合，微信身份映射另见设计与路线图。
+适用版本：0.9.18。`scripts/migrate-storage.ts` 用于本 Web 应用的 PGlite 与 PostgreSQL 之间复制账号和业务数据，可以双向迁移。它不处理原微信云开发集合，微信身份映射另见设计与路线图。
 
 ## 工具边界
 
@@ -8,7 +8,8 @@
 - 默认只预检和展示表数量；加 `--apply` 才复制业务记录。预检会初始化目标空表结构。
 - 执行前停止源、目标应用写入；PGlite 目录必须关闭其他使用进程。
 - 所有目标写入在一个事务内完成，失败回滚；源使用一致性只读快照。
-- 保留原 ID、账号密码哈希、家庭成员、邀请、偏好、审计、时间、软删除及金额；核对表数量与项目/阶段预算、材料计划、支出金额合计。
+- 保留原 ID、账号密码哈希、家庭成员、邀请、偏好、审计、分享令牌、备忘图片、时间、软删除及金额；核对表数量与项目/阶段预算、材料计划、支出金额合计。
+- 分享令牌与备忘图片会随迁移保留，已有分享链接在目标环境继续有效。
 - 不复制现有登录会话和密码重置令牌，迁移后需重新登录。
 - 不合并两个已使用数据库，不覆盖目标现有记录，也不删除源数据。
 
@@ -64,11 +65,11 @@ PGSSLMODE=verify-full
 ```bash
 docker run --rm --env-file .env.migrate \
   -v zhu-jia-web_app_data:/app/data \
-  zhu-jia-web:0.9.17 node --import tsx scripts/migrate-storage.ts
+  zhu-jia-web:0.9.18 node --import tsx scripts/migrate-storage.ts
 
 docker run --rm --env-file .env.migrate \
   -v zhu-jia-web_app_data:/app/data \
-  zhu-jia-web:0.9.17 node --import tsx scripts/migrate-storage.ts --apply
+  zhu-jia-web:0.9.18 node --import tsx scripts/migrate-storage.ts --apply
 ```
 
 目标在宿主机时，给临时迁移容器加 `--add-host host.docker.internal:host-gateway`，PGHOST 填 `host.docker.internal`，不要填容器自身的 localhost。目标是远程数据库时直接填其域名。

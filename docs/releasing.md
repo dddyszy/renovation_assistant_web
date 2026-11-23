@@ -1,6 +1,6 @@
 # 发布流程
 
-当前版本：0.9.17。所有代码、配置和文档变更统一使用：**从 main 建 release → 从 release 建功能分支 → 合入 release → 打 tag 发布 → 合入 main**。
+当前版本：0.9.18。所有代码、配置和文档变更统一使用：**从 main 建 release → 从 release 建功能分支 → 合入 release → 打 tag 发布 → 合入 main**。
 
 ## 分支规则
 
@@ -14,13 +14,13 @@
 
 ## 1. 从 main 创建 release
 
-以下以 `0.9.17` 为例，替换为实际新版本：
+以下以 `0.9.18` 为例，替换为实际新版本：
 
 ```bash
 git switch main
 git pull --ff-only origin main
-git switch -c release/0.9.17
-git push -u origin release/0.9.17
+git switch -c release/0.9.18
+git push -u origin release/0.9.18
 ```
 
 release 创建后，所有新功能都从它切出，不从 main 或旧 release 切出。
@@ -28,8 +28,8 @@ release 创建后，所有新功能都从它切出，不从 main 或旧 release 
 ## 2. 创建功能分支并合入 release
 
 ```bash
-git switch release/0.9.17
-git pull --ff-only origin release/0.9.17
+git switch release/0.9.18
+git pull --ff-only origin release/0.9.18
 git switch -c feat/short-task-name
 ```
 
@@ -40,7 +40,7 @@ npm run check
 git add -A
 git commit -m "feat: 说明本次任务"
 git push -u origin feat/short-task-name
-gh pr create --base release/0.9.17 --head feat/short-task-name
+gh pr create --base release/0.9.18 --head feat/short-task-name
 ```
 
 CI 通过后合入 release，并删除功能分支。多个功能重复上述步骤，始终基于最新 release 创建分支。
@@ -56,9 +56,9 @@ gh pr merge <功能PR编号> --merge --delete-branch
 功能全部合入后，同步 release 并更新版本元数据：
 
 ```bash
-git switch release/0.9.17
-git pull --ff-only origin release/0.9.17
-npm version 0.9.17 --no-git-tag-version
+git switch release/0.9.18
+git pull --ff-only origin release/0.9.18
+npm version 0.9.18 --no-git-tag-version
 ```
 
 还需同步：
@@ -73,8 +73,8 @@ npm version 0.9.17 --no-git-tag-version
 npm ci
 npm run check
 git add -A
-git commit -m "release: 0.9.17"
-git push origin release/0.9.17
+git commit -m "release: 0.9.18"
+git push origin release/0.9.18
 ```
 
 新增 schema 变更必须包括旧数据升级、回滚和恢复验证，见 [数据库结构演进](schema-evolution.md)。不能把启动成功当作旧库已经正确升级。
@@ -86,14 +86,14 @@ git push origin release/0.9.17
 ```bash
 git status --short
 git rev-parse HEAD
-git ls-remote --tags origin refs/tags/v0.9.17
+git ls-remote --tags origin refs/tags/v0.9.18
 ```
 
 创建并推送标签：
 
 ```bash
-git tag -a v0.9.17 -m "Release v0.9.17"
-git push origin refs/tags/v0.9.17
+git tag -a v0.9.18 -m "Release v0.9.18"
+git push origin refs/tags/v0.9.18
 ```
 
 标签触发 `publish-image.yml`，流程依次执行：版本与 release 分支校验 → AMD64/ARM64 构建 → 候选镜像容器验收 → 正式发布 GHCR 标签。
@@ -103,12 +103,12 @@ gh run list --workflow publish-image.yml --limit 1
 gh run watch <运行ID> --exit-status
 ```
 
-发布源必须是 `release/0.9.17` 的最新远程提交，标签名必须与 package.json 版本相同。发布失败时先修复 release，**不要继续合入 main，也不要移动或复用已有标签**；需要变更时递增版本号。
+发布源必须是 `release/0.9.18` 的最新远程提交，标签名必须与 package.json 版本相同。发布失败时先修复 release，**不要继续合入 main，也不要移动或复用已有标签**；需要变更时递增版本号。
 
 手动重新发布也必须明确选择匹配的 release 分支：
 
 ```bash
-gh workflow run publish-image.yml -f source_ref=release/0.9.17
+gh workflow run publish-image.yml -f source_ref=release/0.9.18
 ```
 
 ## 5. 发布成功后合入 main
@@ -116,7 +116,7 @@ gh workflow run publish-image.yml -f source_ref=release/0.9.17
 只有镜像发布和候选验收全部成功后才创建最终 PR：
 
 ```bash
-gh pr create --base main --head release/0.9.17
+gh pr create --base main --head release/0.9.18
 gh pr merge <发布PR编号> --merge
 git switch main
 git pull --ff-only origin main

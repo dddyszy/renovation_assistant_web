@@ -1157,3 +1157,131 @@
     flex-wrap: wrap;
   }
 }
+.note-images-field {
+  gap: 10px;
+}
+.note-image-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.note-image-grid figure {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  align-items: flex-start;
+}
+.note-image-grid img,
+.note-card-images img {
+  width: 104px;
+  height: 104px;
+  object-fit: cover;
+  border-radius: 7px;
+  border: 1px solid #e7ddcd;
+  background: #f4eee4;
+  display: block;
+}
+.note-image-view img,
+.share-images img {
+  width: auto;
+  height: auto;
+  max-width: 240px;
+  max-height: 180px;
+}
+.note-card-images {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding-left: 45px;
+  margin: 0 0 14px;
+}
+.note-card-images img {
+  width: 56px;
+  height: 56px;
+  border-radius: 5px;
+}
+.note-card-images span {
+  font-size: 10px;
+  color: #a18b6b;
+}
+.share-images {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 20px 0 4px;
+}
+@media (max-width: 767px) {
+  .note-image-grid img {
+    width: 88px;
+    height: 88px;
+  }
+  .note-image-view img,
+  .share-images img {
+    max-width: 200px;
+    max-height: 150px;
+  }
+  .note-card-images {
+    padding-left: 0;
+  }
+}
+.column-share-dialog {
+  max-width: 520px;
+}
+.column-share-link {
+  margin: 14px 0 0;
+}
+.share-column-card h1 {
+  margin-bottom: 6px;
+}
+.share-column-note {
+  margin-top: 26px;
+}
+.share-column-note h2 {
+  margin: 0 0 4px;
+  font-size: 17px;
+  font-weight: 550;
+  line-height: 1.6;
+  color: #493c2f;
+  overflow-wrap: anywhere;
+}
+.share-note-meta {
+  margin: 0 0 10px;
+  font-size: 10px;
+  color: #a18b6b;
+}
+.share-column-note ul {
+  margin: 0;
+  padding-left: 18px;
+  font-size: 14px;
+  line-height: 1.9;
+  color: #6f6250;
+}
+.share-column-note li {
+  margin-bottom: 6px;
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+}
+.share-column-note .share-images {
+  margin: 12px 0 0;
+}
+.share-column-divider {
+  display: block;
+  margin-top: 24px;
+  border-top: 1px dashed #e7ddcd;
+}
+.share-expiry {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 11px;
+  color: #8f7b62;
+}
+.share-expiry select {
+  padding: 6px 9px;
+  border: 1px solid #e1d5c4;
+  border-radius: 6px;
+  background: #fffdf9;
+  color: #5f4d3a;
+  font-size: 12px;
+}

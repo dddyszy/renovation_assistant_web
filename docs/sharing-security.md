@@ -1,6 +1,6 @@
 # 备忘分享与公开访问
 
-适用版本：0.9.17。本文说明只读分享的接口、公开路由和安全边界。
+适用版本：0.9.18。本文说明只读分享的接口、公开路由和安全边界。
 
 ## 访问链路
 
@@ -14,7 +14,7 @@ sequenceDiagram
     API->>API: 校验会话、项目权限和归档状态
     API->>API: 生成 32 字节随机 token
     API->>DB: 撤销旧链接并保存 token 的 SHA-256 哈希
-    API-->>Member: 返回 /share/note/:token，7 天有效
+    API-->>Member: 返回 /share/note/:token，有效期 7/30 天或永久
     Visitor->>API: GET /api/v1/share/notes/:token
     API->>DB: 按哈希查找未撤销、未过期的链接
     API-->>Visitor: 仅返回分享所需字段
@@ -24,18 +24,24 @@ sequenceDiagram
 
 - 创建：可写成员调用 `POST /families/:fid/projects/:pid/notes/:rid/share`。
 - 查看：访问 `/share/note/:token`，前端请求公开只读 API。
-- 过期：默认创建后 7 天。
+- 过期：创建时可选 7 天、30 天或永久；默认 7 天。
 - 撤销：查看弹窗中停止分享，或重新生成链接，所有旧链接立即失效。
 - 删除：备忘被软删除后，即使令牌未过期也返回 404。
 
 `note_shares` 保存令牌哈希、创建者、有效期和撤销时间；数据库没有可直接使用的明文令牌。重新生成采用先撤销旧链接、再插入新链接的事务。
+
+## 专栏分享
+
+专栏分享使用独立的 `note_column_shares` 表和 `/share/column/:token` 页面。公开接口返回专栏名、记录人、总条数以及最多 200 条有效备忘，每条含描述、状态、记录人和图片元数据；不返回家庭或项目标识。
+
+专栏图片通过 `/share/columns/:token/images/:imageId` 读取，必须同时匹配有效专栏令牌和图片 ID。专栏、备忘或图片被删除后返回 404。重新生成链接会撤销该专栏的旧链接。
 
 ## 公开路由
 
 `src/router/public-paths.ts` 是唯一的路径分类来源：
 
 - 认证页：`/login`、`/register`、`/reset-password`。
-- 公开分享页：`/share/note/*`。
+- 公开分享页：`/share/note/*`、`/share/column/*`。
 - 其他业务页仍需要登录。
 
 应用等待 `router.isReady()` 后才挂载，避免首次加载时把分享地址误判为 `/`。只有认证页会把已登录用户送回首页，分享页在登录前后均保持可见。
@@ -44,7 +50,9 @@ sequenceDiagram
 
 ## 返回字段
 
-公开接口只返回标题、描述数组、重点和确认状态、专栏名称、记录人昵称与创建/更新时间。不返回家庭 ID、项目 ID、账号 ID、会话、成员列表或其他业务记录。
+公开接口只返回标题、描述数组、图片元数据、重点和确认状态、专栏名称、记录人昵称与创建/更新时间。不返回家庭 ID、项目 ID、账号 ID、会话、成员列表或其他业务记录。
+
+图片通过 `/share/notes/:token/images/:imageId` 单独读取，必须同时匹配有效分享令牌和图片 ID；分享撤销、过期或备忘删除后返回 404。公开图片响应使用 `Cache-Control: no-store`，避免撤销后仍被浏览器长期缓存。
 
 ## 安全边界
 
